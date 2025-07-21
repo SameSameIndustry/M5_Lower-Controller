@@ -1,4 +1,11 @@
 #include "FeetechServo.h"
+#include "CANController.h"
+
+// CAN設定
+const int csPin = 12; // SPI CS ピン
+const long baudRate = CAN_500KBPS; // CAN通信のボーレート
+
+CANController canController(csPin, baudRate);
 
 // サーボ設定
 const std::vector<byte> servoIDs = {1, 2, 3}; // 複数のサーボID
