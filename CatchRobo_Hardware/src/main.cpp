@@ -7,6 +7,12 @@
 
 MCP_CAN can(12); // Set CS to pin 12
 
+// ODriveのオフセット値（適宜調整してください）
+const float offset_ax4 = -0.72;//-6.76f;// 1.62f; //-6.95f; // for node ID 4
+const float offset_ax5 = 0.22; // for node ID 5
+
+float rev = 1.0;
+
 // CAN設定
 const int csPin = 12; // SPI CS ピン
 const long baudRate = CAN_1000KBPS; // CAN通信のボーレート
@@ -42,11 +48,15 @@ void setup() {
     odrive.begin(0x8B, 0x87); // CAN IDを指定して初期化
     M5.Lcd.println("ODrive Initialized");
 
+    odrive.setPosition(0xAC, offset_ax5);  // ノードID 5 に位置2.0fを送信
+    //delay(10);
+    odrive.setPosition(0x8C, offset_ax4);  // ノードID 4 に位置2.0fを送信
+
     delay(5000);
-
-    odrive.setPosition(0xAC, -0.5*3.1415f);  // ノードID 5 に位置2.0fを送信
-
-    odrive.setPosition(0x8C, 0.5*3.1415f);  // ノードID 5 に位置2.0fを送信
+    
+    odrive.setPosition(0xAC, offset_ax5 - rev);  // ノードID 5 に位置2.0fを送信
+    //delay(10);
+    odrive.setPosition(0x8C, offset_ax4 + rev);  // ノードID 4 に位置2.0fを送信
 
     delay(5000);
     
