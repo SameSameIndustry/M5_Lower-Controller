@@ -4,20 +4,8 @@ ServoController::ServoController(HardwareSerial& serial, const std::vector<byte>
     : serial(serial), servoIDs(servoIDs), centerPosition(centerPosition), maxAmplitude(maxAmplitude), radiansIncrement(radiansIncrement), radiansVal(0.0) {}
 
 void ServoController::setup() {
-    M5.begin();
-    Serial.begin(115200);
     serial.begin(1000000, SERIAL_8N1, 36, 26); // TX=26, RX=36
-
     delay(200);
-    Serial.println("サーボスイング制御開始（UART2, 1Mbps）");
-
-    // 画面初期化
-    M5.Lcd.setRotation(1);
-    M5.Lcd.fillScreen(BLACK);
-    M5.Lcd.setTextSize(2);
-    M5.Lcd.setTextColor(GREEN, BLACK);
-    M5.Lcd.setCursor(40, 20);
-    M5.Lcd.print("Servo Swing Monitor");
 }
 
 void ServoController::update() {
@@ -30,25 +18,13 @@ void ServoController::update() {
     for (byte id : servoIDs) {
         moveToPos(id, targetPos);
     }
-
-    // デバッグ出力
-    Serial.printf("Target Pos: %d\n", targetPos);
-
-    // ディスプレイに表示
-    M5.Lcd.fillRect(40, 60, 240, 40, BLACK);  // 前の値を消去
-    M5.Lcd.setCursor(40, 60);
-    M5.Lcd.printf("Pos: %d", targetPos);
-
-    delay(20);
+    delay(10);
 }
 
 void ServoController::setAngleWithSpeed(byte id, float angle, int speed) {
     // 角度をサーボの位置に変換 (角度は0～300度、位置は0～4095)
     int position = centerPosition + int((angle / 300.0) * 4095.0 - 2048);
     moveToPos(id, position, speed);
-
-    // デバッグ出力
-    Serial.printf("Set Angle: %.2f, Position: %d, Speed: %d, ID: %d\n", angle, position, speed, id);
 }
 
 void ServoController::moveToPos(byte id, int position, int speed) {
