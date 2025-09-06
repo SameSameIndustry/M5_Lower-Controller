@@ -1,9 +1,16 @@
 #include "FeetechServo.h"
 #include "CANController.h"
+#include "ODriveCAN.h"
+#include <M5Stack.h>
+#include <mcp_can.h>
+#include <SPI.h>
+
+MCP_CAN can(12); // Set CS to pin 12
 
 // CAN設定
 const int csPin = 12; // SPI CS ピン
-const long baudRate = CAN_500KBPS; // CAN通信のボーレート
+const long baudRate = CAN_1000KBPS; // CAN通信のボーレート
+ODriveCAN odrive(csPin); // CSピンとCAN IDを指定
 
 CANController canController(csPin, baudRate);
 
@@ -18,16 +25,43 @@ HardwareSerial SerialSTS(2); // UART2
 ServoController servoController(SerialSTS, servoIDs, centerPosition, maxAmplitude, radiansIncrement);
 
 void setup() {
+    M5.begin();
+    Serial.begin(115200);
+
+    // CAN通信の初期化
+    if (can.begin(MCP_ANY, CAN_1000KBPS, MCP_8MHZ) != CAN_OK) {
+        Serial.println("CAN initialization failed!");
+        while (1);
+    }
+    can.setMode(MCP_NORMAL);
+
+    Serial.println("CAN initialized successfully.");
+
+    // ODriveの初期設定
+    odrive.begin(0xAB, 0xA7); // CAN IDを指定して初期化
+    odrive.begin(0x8B, 0x87); // CAN IDを指定して初期化
+    M5.Lcd.println("ODrive Initialized");
+
+    delay(5000);
+
+    odrive.setPosition(0xAC, -0.5*3.1415f);  // ノードID 5 に位置2.0fを送信
+
+    odrive.setPosition(0x8C, 0.5*3.1415f);  // ノードID 5 に位置2.0fを送信
+
+    delay(5000);
+    
+    //odrive.setPosition(0xAD, 0.5*3.1415f);  // ノードID 5 に位置2.0fを送信
+
     servoController.setup();
 
-    // サーボID 1 に 90度を速度100で設定
-    servoController.setAngleWithSpeed(1, 90.0, 100);
+    // // サーボID 1 に 90度を速度100で設定
+    // servoController.setAngleWithSpeed(1, 90.0, 100);
 
-    // サーボID 2 に 180度を速度200で設定
-    servoController.setAngleWithSpeed(2, 180.0, 200);
+    // // サーボID 2 に 180度を速度200で設定
+    // servoController.setAngleWithSpeed(2, 180.0, 200);
 
-    // サーボID 3 に 45度を速度150で設定
-    servoController.setAngleWithSpeed(3, 45.0, 150);
+    // // サーボID 3 に 45度を速度150で設定
+    // servoController.setAngleWithSpeed(3, 45.0, 150);
 }
 
 void loop() {
