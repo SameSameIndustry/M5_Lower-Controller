@@ -46,6 +46,34 @@ uint16_t current4 = 0;
 uint16_t current2_init = 850;
 uint16_t current3_init = 850;
 
+float rev1 = 0;
+float rev2 = 0; // 目標値は必ずマイナス
+float rev3 = 0; // 目標値は必ずマイナス
+
+float rev2_offset = 0;
+float rev3_offset = 0;
+
+// 🔧 角度取得関数（引数なし、float型の角度を返す）
+float getAS5600Angle() {
+  uint16_t raw = as5600.readAngle();  // 0–4095
+  float degrees = raw * 360.0 / 4096.0 - encoder_offset;
+
+  // ±180度範囲に収める
+  if (degrees > 180.0) {
+    degrees -= 360.0;
+  } else if (degrees < -180.0) {
+    degrees += 360.0;
+  }
+
+  return degrees;
+}
+
+void CANUpdateTask(void* pvParameters) {
+  while (true) {
+    c610.update();         // CAN受信処理
+    vTaskDelay(1);         // 1 tick ≒ 1ms（CPU負荷軽減）
+  }
+}
 void setup() {
     M5.begin();
     M5.Lcd.setTextSize(2);
@@ -65,6 +93,16 @@ void setup() {
     can.setMode(MCP_NORMAL);
     M5.Lcd.println("CAN Initialized");
 
+    // RTOSタスク起動（スタックサイズ2048、優先度1、Core1で実行）
+    xTaskCreatePinnedToCore(
+        CANUpdateTask,       // タスク関数
+        "CANUpdate",         // タスク名
+        2048,                // スタックサイズ（バイト）
+        NULL,                // 引数（不要ならNULL）
+        1,                   // 優先度（0〜5）
+        NULL,                // タスクハンドル（不要ならNULL）
+        1                    // 実行するコア（0または1）
+    );
 
     if(!digitalRead(r_lim) || !digitalRead(l_lim)) {
         M5.Lcd.println("Error: Limit switch is active at startup!");
@@ -98,8 +136,12 @@ void setup() {
     current2 = 0;
     current3 = 0;
     c610.setCurrents(current1, current2, current3, current4);
+    // c610.update();
+    delay(100);
+    rev2_offset = c610.getAngle(1);
+    rev3_offset = c610.getAngle(2);
     M5.Lcd.printf("Initialization done.\n");
-    delay(10000);
+    delay(5000);
 
     // ODriveの初期設定
     odrive.begin(0x8B, 0x87); // CAN IDを指定して初期化,node ID 4
@@ -115,21 +157,6 @@ void setup() {
     // c610.setCurrents(current1, current2, current3, current4);
 }
 
-// 🔧 角度取得関数（引数なし、float型の角度を返す）
-float getAS5600Angle() {
-  uint16_t raw = as5600.readAngle();  // 0–4095
-  float degrees = raw * 360.0 / 4096.0 - encoder_offset;
-
-  // ±180度範囲に収める
-  if (degrees > 180.0) {
-    degrees -= 360.0;
-  } else if (degrees < -180.0) {
-    degrees += 360.0;
-  }
-
-  return degrees;
-}
-
 void loop() {
     // servoController.setAngleWithSpeed(1, 90.0, 100);
     
@@ -139,23 +166,41 @@ void loop() {
     M5.Lcd.setCursor(0, 30);
     M5.Lcd.printf("Angle: %.2f deg", angle);
 
-    c610.update();
+    // if (abs(angle) > 30.0) {
+    //     current1 = 0;
+    // }
+    // else {
+    //     current1 = -400;
+    // }
+    // c610.setCurrents(current1, current2, current3, current4);
 
-    if (abs(angle) > 30.0) {
-        current1 = 0;
+    rev1 = c610.getAngle(0);   // モータ1の積算角度（±∞）
+    rev2 = c610.getAngle(1) - rev2_offset;
+    rev3 = c610.getAngle(2) - rev3_offset;
+
+    M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
+    M5.Lcd.setCursor(30, 60);
+    M5.Lcd.printf("Rev1: %.2f deg", rev1);
+    M5.Lcd.setCursor(30, 90);
+    M5.Lcd.printf("Rev2: %.2f deg", rev2);
+    M5.Lcd.setCursor(30, 120);
+    M5.Lcd.printf("Rev3: %.2f deg", rev3);
+
+    if (rev2 > -10) {
+        current2 = -600;
+    } else {
+        current2 = 0;
     }
-    else {
-        current1 = -400;
-    }
+    if (rev3 > -10) {
+        current3 = -600;
+    } else {
+        current3 = 0;
+    }   
     c610.setCurrents(current1, current2, current3, current4);
 
-
-    // 📟 表示
-    M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
-    M5.Lcd.setCursor(0, 30);
-    M5.Lcd.printf("Angle: %.2f deg | Current1: %d", angle, current1);
-
-    delay(10);  // 応答性向上のため少し短く
+    delay(20);  // 応答性向上のため少し短く
+    
+    //c610.update();
 
 
 }
