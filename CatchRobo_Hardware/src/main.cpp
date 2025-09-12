@@ -10,8 +10,8 @@
 AS5600 as5600;
 const int encoder_offset = 319;  // オフセット角度（必要に応じて調整）
 
-const int r_lim = 2;
-const int l_lim = 5;
+const int r_lim = 2; // can id = 3 == right
+const int l_lim = 5; // can id = 2 == left
 
 // ODriveのオフセット値（適宜調整してください）
 const float offset_ax4 = -1.72;//-6.76f;// 1.62f; //-6.95f; // for node ID 4
@@ -42,6 +42,10 @@ uint16_t current2 = 0;
 uint16_t current3 = 0;
 uint16_t current4 = 0;
 
+// initial current setup
+uint16_t current2_init = 850;
+uint16_t current3_init = 850;
+
 void setup() {
     M5.begin();
     M5.Lcd.setTextSize(2);
@@ -61,14 +65,50 @@ void setup() {
     can.setMode(MCP_NORMAL);
     M5.Lcd.println("CAN Initialized");
 
+
+    if(!digitalRead(r_lim) || !digitalRead(l_lim)) {
+        M5.Lcd.println("Error: Limit switch is active at startup!");
+        while(1);
+    }
+    else {
+        current3 = current3_init + 200;
+        current2 = current2_init + 200; // 少し強めに
+        c610.setCurrents(current1, current2, current3, current4);
+        delay(50);
+    }
+
+    while(digitalRead(r_lim) || digitalRead(l_lim)) {
+        if (digitalRead(r_lim) && digitalRead(l_lim)) {
+            current3 = current3_init;
+            current2 = current2_init;
+            c610.setCurrents(current1, current2, current3, current4);
+            delay(10);
+        }else if (!digitalRead(r_lim)) {
+            current3 = 0;
+            current2 = current2_init;
+            c610.setCurrents(current1, current2, current3, current4);
+            delay(10);
+        } else if (!digitalRead(l_lim)) {
+            current2 = 0;
+            current3 = current3_init;
+            c610.setCurrents(current1, current2, current3, current4);
+            delay(10);
+        }
+    }
+    current2 = 0;
+    current3 = 0;
+    c610.setCurrents(current1, current2, current3, current4);
+    M5.Lcd.printf("Initialization done.\n");
+    delay(10000);
+
     // ODriveの初期設定
     odrive.begin(0x8B, 0x87); // CAN IDを指定して初期化,node ID 4
     delay(10);
     odrive.begin(0xAB, 0xA7); // CAN IDを指定して初期化,node ID 5
 
-    odrive.setPosition(0x8C, offset_ax4);  // ノードID 4 を原点に復帰
-    delay(2);
-    odrive.setPosition(0xAC, offset_ax5);  // ノードID 5 を原点に復帰
+    // odrive.setPosition(0x8C, offset_ax4);  // ノードID 4 を原点に復帰
+    // delay(2);
+    // odrive.setPosition(0xAC, offset_ax5);  // ノードID 5 を原点に復帰
 
     servoController.setup();
 
