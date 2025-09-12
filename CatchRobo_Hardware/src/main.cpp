@@ -10,6 +10,9 @@
 AS5600 as5600;
 const int encoder_offset = 319;  // オフセット角度（必要に応じて調整）
 
+const int r_lim = 2;
+const int l_lim = 5;
+
 // ODriveのオフセット値（適宜調整してください）
 const float offset_ax4 = -1.72;//-6.76f;// 1.62f; //-6.95f; // for node ID 4
 const float offset_ax5 = -0.82; // for node ID 5
@@ -46,6 +49,9 @@ void setup() {
     Serial.begin(115200);
     Wire.begin();  // SDA=21, SCL=22 on M5Stack
     as5600.begin();  // 初期化（I2Cアドレスはデフォルト0x36）
+    
+    pinMode(r_lim, INPUT_PULLUP);     // 内部プルアップ有効
+    pinMode(l_lim, INPUT_PULLUP);     // 内部プルアップ有効
 
 
     // CAN通信の初期化
@@ -65,36 +71,8 @@ void setup() {
     odrive.setPosition(0xAC, offset_ax5);  // ノードID 5 を原点に復帰
 
     servoController.setup();
-    // delay(6000);
-    
-    // odrive.setPosition(0xAC, offset_ax5 - rev);  // ノードID 5 に位置2.0fを送信
-    // delay(2);
-    // odrive.setPosition(0x8C, offset_ax4 + rev);  // ノードID 4 に位置2.0fを送信
-    
-    // rev = 0.2;
-    // delay(6000);
-    
-    // odrive.setPosition(0xAC, offset_ax5 - rev);  // ノードID 5 に位置2.0fを送信
-    // delay(2);
-    // odrive.setPosition(0x8C, offset_ax4 + rev);  // ノードID 4 に位置2.0fを送信
-    
-    // rev = 1.0;
-    // delay(6000);
-    
-    // odrive.setPosition(0xAC, offset_ax5 - rev);  // ノードID 5 に位置2.0fを送信
-    // delay(2);
-    // odrive.setPosition(0x8C, offset_ax4 + rev);  // ノードID 4 に位置2.0fを送信
 
     // c610.setCurrents(current1, current2, current3, current4);
-
-    // // サーボID 1 に 90度を速度100で設定
-    // servoController.setAngleWithSpeed(1, 90.0, 100);
-
-    // // サーボID 2 に 180度を速度200で設定
-    // servoController.setAngleWithSpeed(2, 180.0, 200);
-
-    // // サーボID 3 に 45度を速度150で設定
-    // servoController.setAngleWithSpeed(3, 45.0, 150);
 }
 
 // 🔧 角度取得関数（引数なし、float型の角度を返す）
@@ -113,13 +91,31 @@ float getAS5600Angle() {
 }
 
 void loop() {
-    servoController.setAngleWithSpeed(1, 90.0, 100);
-    c610.update();
+    // servoController.setAngleWithSpeed(1, 90.0, 100);
     
     float angle = getAS5600Angle();
 
     M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
     M5.Lcd.setCursor(0, 30);
     M5.Lcd.printf("Angle: %.2f deg", angle);
+
+    c610.update();
+
+    if (abs(angle) > 30.0) {
+        current1 = 0;
+    }
+    else {
+        current1 = -400;
+    }
+    c610.setCurrents(current1, current2, current3, current4);
+
+
+    // 📟 表示
+    M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
+    M5.Lcd.setCursor(0, 30);
+    M5.Lcd.printf("Angle: %.2f deg | Current1: %d", angle, current1);
+
+    delay(10);  // 応答性向上のため少し短く
+
 
 }
