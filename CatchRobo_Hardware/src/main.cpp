@@ -207,12 +207,12 @@ void loop() {
     }
 
     if (rev2 > -360*20) {
-        current2 = -650;
+        //current2 = -650;
     } else {
         current2 = 0;
     }
     if (rev3 > -360*20) {
-        current3 = -650;
+        //current3 = -650;
     } else {
         current3 = 0;
     }   
