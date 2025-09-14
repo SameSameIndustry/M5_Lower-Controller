@@ -32,11 +32,28 @@ void C610Controller::update() {
       uint16_t angle_raw = (buf[0] << 8) | buf[1];
       uint16_t speed_raw = (buf[2] << 8) | buf[3];
 
-      float angle_deg = angle_raw * 360 / 8192.0;
-      float delta = angle_deg - last_angle[index];
+      float angle_deg = angle_raw * 360 / 8192;
+      float delta = 0.0;
+      if (speed_raw > 30000 && speed_raw < 65435) { // 逆回転
+        if (angle_deg > last_angle[index]) {
+          delta = (angle_deg - last_angle[index]) - 360;
+        } else {
+          delta = (angle_deg - last_angle[index]);
+        }
+      }
+      else if(speed_raw >= 100) {
+        if (angle_deg < last_angle[index]) {
+          delta = (angle_deg - last_angle[index]) + 360;
+        } else {
+          delta = (angle_deg - last_angle[index]);
+        }
+      }
+      else {
+        float delta = angle_deg - last_angle[index];
 
-      if (delta > 180) delta -= 360.0;
-      if (delta < -180) delta += 360.0;
+        if (delta > 180) delta -= 360.0;
+        if (delta < -180) delta += 360.0;
+      }
 
       total_angle[index] += delta;
       last_angle[index] = angle_deg;

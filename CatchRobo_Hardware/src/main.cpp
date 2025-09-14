@@ -112,8 +112,8 @@ void setup() {
         while(1);
     }
     else {
-        current3 = current3_init + 250;
-        current2 = current2_init + 250; // 少し強めに
+        current3 = current3_init + 300;
+        current2 = current2_init + 300; // 少し強めに
         c610.setCurrents(current1, current2, current3, current4);
         delay(10);
     }
