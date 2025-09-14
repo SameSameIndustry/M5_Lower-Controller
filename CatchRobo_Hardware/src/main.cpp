@@ -13,9 +13,11 @@ const int encoder_offset = 319;  // オフセット角度（必要に応じて�
 const int r_lim = 2; // can id = 3 == right
 const int l_lim = 5; // can id = 2 == left
 
+const int Estop = 35; // Emergency stop pin
+
 // ODriveのオフセット値（適宜調整してください）
-const float offset_ax4 = -1.72;//-6.76f;// 1.62f; //-6.95f; // for node ID 4
-const float offset_ax5 = -0.82; // for node ID 5
+const float offset_ax4 = -1.7;//-6.76f;// 1.62f; //-6.95f; // for node ID 4
+const float offset_ax5 = -3.42; // for node ID 5
 
 float rev = 1.2; // strictry positive
 
@@ -43,8 +45,8 @@ uint16_t current3 = 0;
 uint16_t current4 = 0;
 
 // initial current setup
-uint16_t current2_init = 800;
-uint16_t current3_init = 800;
+uint16_t current2_init = 650;
+uint16_t current3_init = 650;
 
 float rev1 = 0;
 float rev2 = 0; // 目標値は必ずマイナス
@@ -84,6 +86,7 @@ void setup() {
     
     pinMode(r_lim, INPUT_PULLUP);     // 内部プルアップ有効
     pinMode(l_lim, INPUT_PULLUP);     // 内部プルアップ有効
+    pinMode(Estop, INPUT);     // Emergency stop pin
 
 
     // CAN通信の初期化
@@ -109,10 +112,10 @@ void setup() {
         while(1);
     }
     else {
-        current3 = current3_init + 200;
-        current2 = current2_init + 200; // 少し強めに
+        current3 = current3_init + 250;
+        current2 = current2_init + 250; // 少し強めに
         c610.setCurrents(current1, current2, current3, current4);
-        delay(50);
+        delay(10);
     }
 
     while(digitalRead(r_lim) || digitalRead(l_lim)) {
@@ -137,7 +140,7 @@ void setup() {
     current3 = 0;
     c610.setCurrents(current1, current2, current3, current4);
     // c610.update();
-    delay(100);
+    delay(1000);
     rev2_offset = c610.getAngle(1);
     rev3_offset = c610.getAngle(2);
     M5.Lcd.printf("Initialization done.\n");
@@ -148,9 +151,15 @@ void setup() {
     delay(10);
     odrive.begin(0xAB, 0xA7); // CAN IDを指定して初期化,node ID 5
 
-    // odrive.setPosition(0x8C, offset_ax4);  // ノードID 4 を原点に復帰
-    // delay(2);
-    // odrive.setPosition(0xAC, offset_ax5);  // ノードID 5 を原点に復帰
+    odrive.setPosition(0x8C, offset_ax4);  // ノードID 4 を原点に復帰
+    delay(2);
+    odrive.setPosition(0xAC, offset_ax5);  // ノードID 5 を原点に復帰
+
+    delay(3000); // 少し待つ
+    odrive.setPosition(0x8C, offset_ax4 + 1.3);  // ノードID 4 を原点に復帰
+    delay(2);
+    odrive.setPosition(0xAC, offset_ax5 - 1.3);  // ノードID 5 を原点に復帰
+    
 
     servoController.setup();
 
@@ -185,12 +194,24 @@ void loop() {
     M5.Lcd.setCursor(30, 120);
     M5.Lcd.printf("Rev3: %.2f deg", rev3);
 
-    if (rev2 > -360*20) {
+    M5.Lcd.setCursor(0, 150);
+    if (!digitalRead(Estop)) {
+        M5.Lcd.printf("EMERGENCY STOP!");
+        current1 = 0;
+        current2 = 0;
+        current3 = 0;
+        c610.setCurrents(current1, current2, current3, current4);
+        while(1);
+    } else {
+        M5.Lcd.printf("No Emergency");
+    }
+
+    if (rev2 > -360*10) {
         current2 = -650;
     } else {
         current2 = 0;
     }
-    if (rev3 > -360*20) {
+    if (rev3 > -360*10) {
         current3 = -650;
     } else {
         current3 = 0;
