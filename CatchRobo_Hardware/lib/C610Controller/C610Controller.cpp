@@ -40,11 +40,15 @@ void C610Controller::update() {
       } else if (diff < -4096) {
         diff += 8192;
       }
-      if (pre_diff[index] > 2048 && current_speed_val > 10 && diff < 0) { // ノイズ対策
-        diff += 8192;
+      if (pre_diff[index] > 2048 && current_speed_val > 10) { // ノイズ対策
+        while (diff < 0){
+          diff += 8192;
+        }
       }
-      else if (pre_diff[index] < -2048 && current_speed_val < -10 && diff > 0) { // ノイズ対策
-        diff -= 8192;
+      else if (pre_diff[index] < -2048 && current_speed_val < -10) { // ノイズ対策
+        while (diff > 0) {
+          diff -= 8192;
+        }
       }
       total_angle[index] += diff / 8192.0 * 2 * M_PI;
       last_angle[index] = current_angle;

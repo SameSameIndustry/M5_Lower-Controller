@@ -138,6 +138,7 @@ void setup() {
     }
     current2 = 0;
     current3 = 0;
+    
     c610.setCurrents(current1, current2, current3, current4);
     // c610.update();
     delay(1000);
