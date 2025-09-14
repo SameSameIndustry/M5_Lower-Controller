@@ -144,7 +144,7 @@ void setup() {
     rev2_offset = c610.getAngle(1);
     rev3_offset = c610.getAngle(2);
     M5.Lcd.printf("Initialization done.\n");
-    delay(5000);
+    delay(3000);
 
     // ODriveの初期設定
     odrive.begin(0x8B, 0x87); // CAN IDを指定して初期化,node ID 4
@@ -206,12 +206,12 @@ void loop() {
         M5.Lcd.printf("No Emergency");
     }
 
-    if (rev2 > -360*10) {
+    if (rev2 > -360*20) {
         current2 = -650;
     } else {
         current2 = 0;
     }
-    if (rev3 > -360*10) {
+    if (rev3 > -360*20) {
         current3 = -650;
     } else {
         current3 = 0;
