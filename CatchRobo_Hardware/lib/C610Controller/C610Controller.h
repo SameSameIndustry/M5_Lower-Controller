@@ -18,5 +18,6 @@ private:
   float last_angle[4] = {0, 0, 0, 0};
   float total_angle[4] = {0, 0, 0, 0};
   float current_speed[4] = {0, 0, 0, 0};
+  int pre_diff[4] = {0, 0, 0, 0};
 
 };

@@ -141,6 +141,7 @@ void setup() {
     c610.setCurrents(current1, current2, current3, current4);
     // c610.update();
     delay(1000);
+    
     rev2_offset = c610.getAngle(1);
     rev3_offset = c610.getAngle(2);
     M5.Lcd.printf("Initialization done.\n");
@@ -206,13 +207,13 @@ void loop() {
         M5.Lcd.printf("No Emergency");
     }
 
-    if (rev2 > -360*20) {
-        //current2 = -650;
+    if (rev2 > -2*M_PI*10) {
+        current2 = -650;
     } else {
         current2 = 0;
     }
-    if (rev3 > -360*20) {
-        //current3 = -650;
+    if (rev3 > -2*M_PI*10) {
+        current3 = -650;
     } else {
         current3 = 0;
     }   
