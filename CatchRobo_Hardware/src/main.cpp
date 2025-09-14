@@ -43,8 +43,8 @@ uint16_t current3 = 0;
 uint16_t current4 = 0;
 
 // initial current setup
-uint16_t current2_init = 850;
-uint16_t current3_init = 850;
+uint16_t current2_init = 800;
+uint16_t current3_init = 800;
 
 float rev1 = 0;
 float rev2 = 0; // 目標値は必ずマイナス
@@ -178,7 +178,6 @@ void loop() {
     rev2 = c610.getAngle(1) - rev2_offset;
     rev3 = c610.getAngle(2) - rev3_offset;
 
-    M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
     M5.Lcd.setCursor(30, 60);
     M5.Lcd.printf("Rev1: %.2f deg", rev1);
     M5.Lcd.setCursor(30, 90);
@@ -186,13 +185,13 @@ void loop() {
     M5.Lcd.setCursor(30, 120);
     M5.Lcd.printf("Rev3: %.2f deg", rev3);
 
-    if (rev2 > -10) {
-        current2 = -600;
+    if (rev2 > -360*20) {
+        current2 = -650;
     } else {
         current2 = 0;
     }
-    if (rev3 > -10) {
-        current3 = -600;
+    if (rev3 > -360*20) {
+        current3 = -650;
     } else {
         current3 = 0;
     }   
