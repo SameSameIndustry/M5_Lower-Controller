@@ -23,7 +23,7 @@ void ServoController::update() {
 
 void ServoController::setAngleWithSpeed(byte id, float angle, int speed) {
     // 角度をサーボの位置に変換 (角度は0～300度、位置は0～4095)
-    int position = centerPosition + int((angle / 300.0) * 4095.0 - 2048);
+    int position = angle/M_PI*2048 + centerPosition; // angle is in radians, centerPosition is the neutral position
     moveToPos(id, position, speed);
 }
 

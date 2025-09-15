@@ -71,6 +71,11 @@ static uint16_t ids[] = {0x202, 0x203};
 const float one_rev = 36*2*M_PI; // 1回転あたりの角度（36歯ギア×2πラジアン）
 const float pitch_offset = 0.4; // ピッチオフセット（必要に応じて調整）
 
+// servoControllerの目標角度
+float servo1_angle = 0.0;
+float servo2_angle = 0.0;
+float servo3_angle = 0.0;
+
 // 🔧 角度取得関数（引数なし、float型の角度を返す）
 float getAS5600Angle() {
   uint16_t raw = as5600.readAngle();  // 0–4095
@@ -130,9 +135,9 @@ void receiveTask(void* pvParameters) {
 
     if(0 < rev2 && rev2 <= 0.41){
         if (abs(receivedData_e[2]) < current_max*0.5) {
-            if (receivedData_e[2] > 0){
+            if (receivedData_e[2] > 20){
                 current2 = receivedData_e[2] + 300;
-            }else if(receivedData_e[2] < 0){
+            }else if(receivedData_e[2] < -20){
                 current2 = receivedData_e[2] - 300;
             }else{
                 current2 = 0;
@@ -150,10 +155,10 @@ void receiveTask(void* pvParameters) {
     
     if(0 < rev3 && rev3 <= 0.41){
         if (abs(receivedData_e[3]) < current_max*0.5) {
-            if (receivedData_e[3] > 0){
-                current3 = receivedData_e[3] + 300;
-            }else if(receivedData_e[3] < 0){
-                current3 = receivedData_e[3] - 300;
+            if (receivedData_e[3] > 20){
+                current3 = receivedData_e[3] + 360;
+            }else if(receivedData_e[3] < -20){
+                current3 = receivedData_e[3] - 360;
             }else{
                 current3 = 0;
             }
@@ -181,6 +186,23 @@ void receiveTask(void* pvParameters) {
     } else {
         current1 = 0;
     }
+
+    if(receivedData_p[5] >= -0.68 && receivedData_p[5] <= 0.68){
+        servo1_angle = receivedData_p[5];
+    }else{
+        servo1_angle = 0.0;
+    }
+    if(receivedData_p[6] >= -1 && receivedData_p[6] <= 1){
+        servo2_angle = receivedData_p[6];
+    }else{
+        servo2_angle = 0.0;
+    }
+    if(receivedData_p[7] >= -1 && receivedData_p[7] <= 1){
+        servo3_angle = receivedData_p[7];
+    }else{
+        servo3_angle = 0.0;
+    }
+
 
     vTaskDelay(pdMS_TO_TICKS(10)); // 10
   }
@@ -269,6 +291,12 @@ void initialize(){
     delay(10);
     odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // ノードID 5 を原点に復帰
 
+    delay(20);
+    
+    servoController.setAngleWithSpeed(1, 0, 100); // angle is always negative
+    servoController.setAngleWithSpeed(2, 0, 100); // angle is always negative
+    servoController.setAngleWithSpeed(3, 0, 100); // angle is always negative
+
     M5.Lcd.printf("Initialization done.\n");
 }
 
@@ -296,16 +324,6 @@ void setup() {
     can.setMode(MCP_NORMAL);
     M5.Lcd.println("CAN Initialized");
 
-    // RTOSタスク起動（スタックサイズ2048、優先度1、Core1で実行）
-    // xTaskCreatePinnedToCore(
-    //     CANUpdateTask,       // タスク関数
-    //     "CANUpdate",         // タスク名
-    //     4096,                // スタックサイズ（バイト）
-    //     NULL,                // 引数（不要ならNULL）
-    //     1,                   // 優先度（0〜5）
-    //     NULL,                // タスクハンドル（不要ならNULL）
-    //     0                    // 実行するコア（0または1）
-    // );
     for (int i = 0; i < 2; ++i) {
         xTaskCreatePinnedToCore(
         CANUpdateTask,
@@ -317,11 +335,11 @@ void setup() {
         1
         );
     }
-
+    
+    servoController.setup();
 
     initialize();
     
-    servoController.setup();
     M5.Lcd.fillScreen(BLACK);
 
     // c610.setCurrents(current1, current2, current3, current4);
@@ -362,19 +380,7 @@ void loop() {
     M5.Lcd.setCursor(30, 120);
     M5.Lcd.printf("Rev3: %.4f rad", rev3);
 
-    // if (rev2 > 0.35) {
-    //     current2 = -650;
-    // } else {
-    //     current2 = 0;
-    // }
-    // if (rev3 > 0.35) {
-    //     current3 = -650;
-    // } else {
-    //     current3 = 0;
-    // }
-    // current1 = 0;
     delay(5);
-    // c610.setCurrents(current1, current2, current3, current4);
     c610.setCurrents(current1, current2, current3, current4);
 
     M5.Lcd.setCursor(0, 150);
@@ -390,4 +396,7 @@ void loop() {
     delay(5);
     odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // move to target ax5
     delay(5);
+    servoController.setAngleWithSpeed(1, servo1_angle, 100); // angle is always negative
+    servoController.setAngleWithSpeed(2, servo2_angle, 100); // angle is always negative
+    servoController.setAngleWithSpeed(3, servo3_angle, 100); // angle is always negative
 }
