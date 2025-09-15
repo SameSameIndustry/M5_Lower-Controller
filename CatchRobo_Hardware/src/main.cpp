@@ -55,6 +55,8 @@ float rev3 = 0; // 目標値は必ずマイナス
 float rev2_offset = 0;
 float rev3_offset = 0;
 
+static uint16_t ids[] = {0x201, 0x202, 0x203};
+
 // 🔧 角度取得関数（引数なし、float型の角度を返す）
 float getAS5600Angle() {
   uint16_t raw = as5600.readAngle();  // 0–4095
@@ -70,12 +72,29 @@ float getAS5600Angle() {
   return degrees;
 }
 
+// void CANUpdateTask(void* pvParameters) {
+//   TickType_t xLastWakeTime = xTaskGetTickCount();
+//   const TickType_t xFrequency = 1; // 1ms周期
+
+//   while (true) {
+//     c610.update();
+//     vTaskDelayUntil(&xLastWakeTime, xFrequency);
+//   }
+
+// }
+
 void CANUpdateTask(void* pvParameters) {
+  uint16_t target_id = *((uint16_t*)pvParameters);
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  const TickType_t xFrequency = 1;  // 1ms周期
+
   while (true) {
-    c610.update();         // CAN受信処理
-    vTaskDelay(1);         // 1 tick ≒ 1ms（CPU負荷軽減）
+    c610.update(target_id);
+    vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
+
+
 void setup() {
     M5.begin();
     M5.Lcd.setTextSize(2);
@@ -97,16 +116,28 @@ void setup() {
     M5.Lcd.println("CAN Initialized");
 
     // RTOSタスク起動（スタックサイズ2048、優先度1、Core1で実行）
-    xTaskCreatePinnedToCore(
-        CANUpdateTask,       // タスク関数
-        "CANUpdate",         // タスク名
-        2048,                // スタックサイズ（バイト）
-        NULL,                // 引数（不要ならNULL）
-        1,                   // 優先度（0〜5）
-        NULL,                // タスクハンドル（不要ならNULL）
-        1                    // 実行するコア（0または1）
-    );
+    // xTaskCreatePinnedToCore(
+    //     CANUpdateTask,       // タスク関数
+    //     "CANUpdate",         // タスク名
+    //     4096,                // スタックサイズ（バイト）
+    //     NULL,                // 引数（不要ならNULL）
+    //     1,                   // 優先度（0〜5）
+    //     NULL,                // タスクハンドル（不要ならNULL）
+    //     0                    // 実行するコア（0または1）
+    // );
+    for (int i = 0; i < 3; ++i) {
+        xTaskCreatePinnedToCore(
+        CANUpdateTask,
+        "CANUpdateTask",
+        2048,
+        &ids[i],
+        1,
+        NULL,
+        0
+        );
+    }
 
+/*
     if(!digitalRead(r_lim) || !digitalRead(l_lim)) {
         M5.Lcd.println("Error: Limit switch is active at startup!");
         while(1);
@@ -136,11 +167,13 @@ void setup() {
             delay(10);
         }
     }
+        */
     current2 = 0;
     current3 = 0;
     
     c610.setCurrents(current1, current2, current3, current4);
     // c610.update();
+    
     delay(1000);
     
     rev2_offset = c610.getAngle(1);
@@ -154,12 +187,12 @@ void setup() {
     odrive.begin(0xAB, 0xA7); // CAN IDを指定して初期化,node ID 5
 
     odrive.setPosition(0x8C, offset_ax4);  // ノードID 4 を原点に復帰
-    delay(2);
+    delay(10);
     odrive.setPosition(0xAC, offset_ax5);  // ノードID 5 を原点に復帰
 
     delay(3000); // 少し待つ
     odrive.setPosition(0x8C, offset_ax4 + 1.3);  // ノードID 4 を原点に復帰
-    delay(2);
+    delay(10);
     odrive.setPosition(0xAC, offset_ax5 - 1.3);  // ノードID 5 を原点に復帰
     
 
@@ -173,7 +206,7 @@ void loop() {
     
     float angle = getAS5600Angle();
 
-    M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
+    // M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
     M5.Lcd.setCursor(0, 30);
     M5.Lcd.printf("Angle: %.2f deg", angle);
 
@@ -209,18 +242,18 @@ void loop() {
     }
 
     if (rev2 > -2*M_PI*10) {
-        current2 = -650;
+        // current2 = -650;
     } else {
         current2 = 0;
     }
     if (rev3 > -2*M_PI*10) {
-        current3 = -650;
+        // current3 = -650;
     } else {
         current3 = 0;
     }   
     c610.setCurrents(current1, current2, current3, current4);
 
-    delay(20);  // 応答性向上のため少し短く
+    delay(10);  // 応答性向上のため少し短く
     
     //c610.update();
 

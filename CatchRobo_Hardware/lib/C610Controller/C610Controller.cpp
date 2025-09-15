@@ -19,15 +19,23 @@ void C610Controller::setCurrents(int16_t current1, int16_t current2, int16_t cur
 }
 
 
-void C610Controller::update() {
+void C610Controller::update(uint16_t CANID) {
   if (CAN_MSGAVAIL == can->checkReceive()) {
-    unsigned long canId;
-    byte len;
-    byte buf[8];
+  unsigned long canId = 0;
+  byte len;
+  byte buf[8];
+  uint16_t base_id = 0;
+  do {
     can->readMsgBuf(&canId, &len, buf);
+    base_id = canId & 0x7FF;
+  } while (base_id != (CANID));
 
-    uint16_t base_id = canId & 0x7FF;
-    if (base_id >= 0x201 && base_id <= 0x204) {
+    // byte len;
+    // byte buf[8];
+    // can->readMsgBuf(&canId, &len, buf);
+
+    // base_id = canId & 0x7FF;
+    // if (base_id == (CANID)) {
       uint8_t index = base_id - 0x201;
       uint16_t angle_raw = (buf[0] << 8) | buf[1];
       uint16_t speed_raw = (buf[2] << 8) | buf[3];
@@ -40,12 +48,12 @@ void C610Controller::update() {
       } else if (diff < -4096) {
         diff += 8192;
       }
-      if (pre_diff[index] > 2048 && current_speed_val > 10) { // ノイズ対策
+      if (pre_diff[index] > 2048 && current_speed_val > 500) { // ノイズ対策
         while (diff < 0){
           diff += 8192;
         }
       }
-      else if (pre_diff[index] < -2048 && current_speed_val < -10) { // ノイズ対策
+      else if (pre_diff[index] < -2048 && current_speed_val < -500) { // ノイズ対策
         while (diff > 0) {
           diff -= 8192;
         }
@@ -54,7 +62,7 @@ void C610Controller::update() {
       last_angle[index] = current_angle;
       pre_diff[index] = diff;
     }
-  }
+  // }
 }
 
 float C610Controller::getAngle(uint8_t motor_index) {
