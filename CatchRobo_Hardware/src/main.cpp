@@ -86,6 +86,7 @@ float getAS5600Angle() {
   return degrees;
 }
 
+// 受信データをLCDに表示する関数
 // void CANUpdateTask(void* pvParameters) {
 //   TickType_t xLastWakeTime = xTaskGetTickCount();
 //   const TickType_t xFrequency = 1; // 1ms周期
@@ -116,6 +117,8 @@ void receiveTask(void* pvParameters) {
     float receivedData_p[8];
     float receivedData_e[8];
     processor->getReceivedData(receivedData_p, receivedData_e);
+    
+    // displayReceivedData(receivedData_p, 8);
 
     if (-1*receivedData_p[0]<=0 && ax4_lim <= -1*receivedData_p[0]) {
         ax4_target = -1*receivedData_p[0]; // 目標値は必ずマイナス
@@ -125,38 +128,61 @@ void receiveTask(void* pvParameters) {
         ax5_target = -1*ax4_lim; // 目標値は必ずマイナス
     }
 
-    if (abs(receivedData_e[2]) < current_max) {
-        if(0 < rev2 && rev2 < 0.4){ // 0.4 rad = 23度以内なら
-            current2 = receivedData_e[2];
+    if(0 < rev2 && rev2 <= 0.41){
+        if (abs(receivedData_e[2]) < current_max*0.5) {
+            if (receivedData_e[2] > 0){
+                current2 = receivedData_e[2] + 300;
+            }else if(receivedData_e[2] < 0){
+                current2 = receivedData_e[2] - 300;
+            }else{
+                current2 = 0;
+            }
         }else{
-            current2 = 0;
+            if (receivedData_e[2] > 0){
+                current2 = current_max;
+            }else{
+                current2 = -1*current_max;
+            }
         }
     } else {
         current2 = 0;
     }
     
-    if (abs(receivedData_e[3]) < current_max) {
-        if(0 < rev3 && rev3 < 0.4){ // 0.4 rad = 23度以内なら
-            current3 = receivedData_e[3];
+    if(0 < rev3 && rev3 <= 0.41){
+        if (abs(receivedData_e[3]) < current_max*0.5) {
+            if (receivedData_e[3] > 0){
+                current3 = receivedData_e[3] + 300;
+            }else if(receivedData_e[3] < 0){
+                current3 = receivedData_e[3] - 300;
+            }else{
+                current3 = 0;
+            }
         }else{
-            current3 = 0;
+            if (receivedData_e[3] > 0){
+                current3 = current_max;
+            }else{
+                current3 = -1*current_max;
+            }
         }
     } else {
         current3 = 0;
     }
 
-    
-    if (abs(receivedData_e[4]) < current_max) {
-        if(abs(angle) < M_PI/2){ // 90度以内なら
+    if(abs(angle) < M_PI/2){
+        if (abs(receivedData_e[4]) < current_max) {
             current1 = receivedData_e[4];
         }else{
-            current1 = 0;
+            if(receivedData_e[4] > 0){
+                current1 = current_max;
+            }else{  
+                current1 = -1*current_max;
+            }
         }
     } else {
         current1 = 0;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(10)); // 10
   }
 }
 
@@ -173,7 +199,7 @@ void sendTask(void* pvParameters) {
         processor->setStateData(p_data);
         processor->send();  // STATE送信
 
-        vTaskDelay(pdMS_TO_TICKS(100));  // 100ms周期
+        vTaskDelay(pdMS_TO_TICKS(10));  // 100ms周期
     }
 }
 
@@ -296,6 +322,7 @@ void setup() {
     initialize();
     
     servoController.setup();
+    M5.Lcd.fillScreen(BLACK);
 
     // c610.setCurrents(current1, current2, current3, current4);
 }
@@ -312,24 +339,28 @@ void loop() {
         // M5.Lcd.setTextColor(RED);
         // M5.Lcd.setTextSize(3);
         // M5.Lcd.printf("EMERGENCY STOP!");
-        while(1);
+        while(!digitalRead(Estop)){
+            delay(100);
+        }
+        initialize();
     } else {
         M5.Lcd.printf("No Emergency");
     }
     
     angle = getAS5600Angle();
 
+    
     // M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
     M5.Lcd.setCursor(0, 60);
-    M5.Lcd.printf("Angle: %.2f rad", angle);
+    M5.Lcd.printf("Angle: %.4f rad", angle);
 
     rev2 = pitch_offset + (c610.getAngle(1) - rev2_offset)/one_rev*M_PI/60; // 何回転したか
     rev3 = pitch_offset + (c610.getAngle(2) - rev3_offset)/one_rev*M_PI/60;
 
     M5.Lcd.setCursor(30, 90);
-    M5.Lcd.printf("Rev2: %.2f rad", rev2);
+    M5.Lcd.printf("Rev2: %.4f rad", rev2);
     M5.Lcd.setCursor(30, 120);
-    M5.Lcd.printf("Rev3: %.2f rad", rev3);
+    M5.Lcd.printf("Rev3: %.4f rad", rev3);
 
     // if (rev2 > 0.35) {
     //     current2 = -650;
@@ -343,13 +374,16 @@ void loop() {
     // }
     // current1 = 0;
     delay(5);
+    // c610.setCurrents(current1, current2, current3, current4);
     c610.setCurrents(current1, current2, current3, current4);
+
     M5.Lcd.setCursor(0, 150);
     M5.Lcd.printf("Cur1: %d mA", current1);
     M5.Lcd.setCursor(0, 180);
     M5.Lcd.printf("Cur2: %d mA", current2);
     M5.Lcd.setCursor(0, 210);
     M5.Lcd.printf("Cur3: %d mA", current3);
+    
     delay(10);  // wait for responsiveness
     
     odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // move to target ax4
