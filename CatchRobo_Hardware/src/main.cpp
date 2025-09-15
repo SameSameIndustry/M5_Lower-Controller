@@ -133,7 +133,7 @@ void setup() {
         &ids[i],
         1,
         NULL,
-        0
+        1
         );
     }
 
@@ -168,6 +168,7 @@ void setup() {
         }
     }
         */
+    current1 = 0;
     current2 = 0;
     current3 = 0;
     
@@ -250,10 +251,13 @@ void loop() {
         // current3 = -650;
     } else {
         current3 = 0;
-    }   
+    }
+    current1 = 0;
     c610.setCurrents(current1, current2, current3, current4);
+    M5.Lcd.setCursor(0, 180);
+    M5.Lcd.printf("Cur1: %d mA", current1);
 
-    delay(10);  // 応答性向上のため少し短く
+    delay(20);  // 応答性向上のため少し短く
     
     //c610.update();
 

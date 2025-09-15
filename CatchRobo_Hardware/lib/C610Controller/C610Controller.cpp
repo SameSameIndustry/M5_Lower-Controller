@@ -25,7 +25,12 @@ void C610Controller::update(uint16_t CANID) {
   byte len;
   byte buf[8];
   uint16_t base_id = 0;
+  unsigned long start_time = millis();
   do {
+    if (millis() - start_time > 1) { // 1秒のタイムアウト
+        Serial.println("CAN message timeout");
+        return; // タイムアウト時に処理を終了
+    }
     can->readMsgBuf(&canId, &len, buf);
     base_id = canId & 0x7FF;
   } while (base_id != (CANID));
