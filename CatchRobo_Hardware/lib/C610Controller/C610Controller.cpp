@@ -27,13 +27,13 @@ void C610Controller::update(uint16_t CANID) {
   uint16_t base_id = 0;
   unsigned long start_time = millis();
   do {
-    if (millis() - start_time > 1) { // 1秒のタイムアウト
-        Serial.println("CAN message timeout");
-        return; // タイムアウト時に処理を終了
+    if (millis() - start_time > 1) { // 1m秒のタイムアウト
+        // Serial.println("CAN message timeout");
+        return; // タイムアウト時にupdate関数自体を終了させる
     }
     can->readMsgBuf(&canId, &len, buf);
     base_id = canId & 0x7FF;
-  } while (base_id != (CANID));
+  } while (base_id != CANID);
 
     // byte len;
     // byte buf[8];
@@ -66,8 +66,8 @@ void C610Controller::update(uint16_t CANID) {
       total_angle[index] += diff / 8192.0 * 2 * M_PI;
       last_angle[index] = current_angle;
       pre_diff[index] = diff;
-    }
-  // }
+    // }
+  }
 }
 
 float C610Controller::getAngle(uint8_t motor_index) {

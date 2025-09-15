@@ -48,14 +48,14 @@ uint16_t current4 = 0;
 uint16_t current2_init = 650;
 uint16_t current3_init = 650;
 
-float rev1 = 0;
+// float rev1 = 0;
 float rev2 = 0; // 目標値は必ずマイナス
 float rev3 = 0; // 目標値は必ずマイナス
 
 float rev2_offset = 0;
 float rev3_offset = 0;
 
-static uint16_t ids[] = {0x201, 0x202, 0x203};
+static uint16_t ids[] = {0x202, 0x203};
 
 // 🔧 角度取得関数（引数なし、float型の角度を返す）
 float getAS5600Angle() {
@@ -86,7 +86,7 @@ float getAS5600Angle() {
 void CANUpdateTask(void* pvParameters) {
   uint16_t target_id = *((uint16_t*)pvParameters);
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xFrequency = 1;  // 1ms周期
+  const TickType_t xFrequency = 5;  // 3ms周期
 
   while (true) {
     c610.update(target_id);
@@ -125,7 +125,7 @@ void setup() {
     //     NULL,                // タスクハンドル（不要ならNULL）
     //     0                    // 実行するコア（0または1）
     // );
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 2; ++i) {
         xTaskCreatePinnedToCore(
         CANUpdateTask,
         "CANUpdateTask",
@@ -137,7 +137,7 @@ void setup() {
         );
     }
 
-/*
+
     if(!digitalRead(r_lim) || !digitalRead(l_lim)) {
         M5.Lcd.println("Error: Limit switch is active at startup!");
         while(1);
@@ -167,7 +167,7 @@ void setup() {
             delay(10);
         }
     }
-        */
+        
     current1 = 0;
     current2 = 0;
     current3 = 0;
@@ -219,12 +219,12 @@ void loop() {
     // }
     // c610.setCurrents(current1, current2, current3, current4);
 
-    rev1 = c610.getAngle(0);   // モータ1の積算角度（±∞）
+    // rev1 = c610.getAngle(0);   // モータ1の積算角度（±∞）
     rev2 = c610.getAngle(1) - rev2_offset;
     rev3 = c610.getAngle(2) - rev3_offset;
 
-    M5.Lcd.setCursor(30, 60);
-    M5.Lcd.printf("Rev1: %.2f deg", rev1);
+    // M5.Lcd.setCursor(30, 60);
+    // M5.Lcd.printf("Rev1: %.2f deg", rev1);
     M5.Lcd.setCursor(30, 90);
     M5.Lcd.printf("Rev2: %.2f deg", rev2);
     M5.Lcd.setCursor(30, 120);
@@ -243,23 +243,24 @@ void loop() {
     }
 
     if (rev2 > -2*M_PI*10) {
-        // current2 = -650;
+        current2 = -650;
     } else {
         current2 = 0;
     }
     if (rev3 > -2*M_PI*10) {
-        // current3 = -650;
+        current3 = -650;
     } else {
         current3 = 0;
     }
     current1 = 0;
+    delay(10);
     c610.setCurrents(current1, current2, current3, current4);
     M5.Lcd.setCursor(0, 180);
     M5.Lcd.printf("Cur1: %d mA", current1);
 
-    delay(20);  // 応答性向上のため少し短く
+    delay(10);  // 応答性向上のため少し短く
     
-    //c610.update();
+    // c610.update();
 
 
 }
