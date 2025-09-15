@@ -345,7 +345,11 @@ void loop() {
     delay(5);
     c610.setCurrents(current1, current2, current3, current4);
     M5.Lcd.setCursor(0, 150);
-    M5.Lcd.printf("Cur1: %d mA, Cur2: %d mA, Cur3: %d mA", current1, current2, current3);
+    M5.Lcd.printf("Cur1: %d mA", current1);
+    M5.Lcd.setCursor(0, 180);
+    M5.Lcd.printf("Cur2: %d mA", current2);
+    M5.Lcd.setCursor(0, 210);
+    M5.Lcd.printf("Cur3: %d mA", current3);
     delay(10);  // wait for responsiveness
     
     odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // move to target ax4
