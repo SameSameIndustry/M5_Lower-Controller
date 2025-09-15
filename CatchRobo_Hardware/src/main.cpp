@@ -6,9 +6,12 @@
 #include <SPI.h>
 #include <AS5600.h>
 #include <Wire.h>
+#include "CommandProcessor.h"
+
+CommandProcessor* processor;
 
 AS5600 as5600;
-const int encoder_offset = 319;  // オフセット角度（必要に応じて調整）
+const float encoder_offset = 0.7;  // オフセット角度（必要に応じて調整）
 
 const int r_lim = 2; // can id = 3 == right
 const int l_lim = 5; // can id = 2 == left
@@ -18,6 +21,11 @@ const int Estop = 35; // Emergency stop pin
 // ODriveのオフセット値（適宜調整してください）
 const float offset_ax4 = -1.7;//-6.76f;// 1.62f; //-6.95f; // for node ID 4
 const float offset_ax5 = -3.42; // for node ID 5
+
+float ax4_target = 0.0f;
+float ax5_target = 0.0f;
+
+float ax4_lim = -1.02; // -58度
 
 float rev = 1.2; // strictry positive
 
@@ -48,25 +56,31 @@ uint16_t current4 = 0;
 uint16_t current2_init = 650;
 uint16_t current3_init = 650;
 
+uint16_t current_max = 950;
+
 // float rev1 = 0;
 float rev2 = 0; // 目標値は必ずマイナス
 float rev3 = 0; // 目標値は必ずマイナス
 
 float rev2_offset = 0;
 float rev3_offset = 0;
+float angle = 0; // 目標値は必ずマイナス
 
 static uint16_t ids[] = {0x202, 0x203};
+
+const float one_rev = 36*2*M_PI; // 1回転あたりの角度（36歯ギア×2πラジアン）
+const float pitch_offset = 0.4; // ピッチオフセット（必要に応じて調整）
 
 // 🔧 角度取得関数（引数なし、float型の角度を返す）
 float getAS5600Angle() {
   uint16_t raw = as5600.readAngle();  // 0–4095
-  float degrees = raw * 360.0 / 4096.0 - encoder_offset;
+  float degrees = -1 * raw * 2*M_PI / 4096.0 - encoder_offset;
 
   // ±180度範囲に収める
-  if (degrees > 180.0) {
-    degrees -= 360.0;
-  } else if (degrees < -180.0) {
-    degrees += 360.0;
+  if (degrees > M_PI) {
+    degrees -= 2*M_PI;
+  } else if (degrees < -1*M_PI) {
+    degrees += 2*M_PI;
   }
 
   return degrees;
@@ -94,6 +108,73 @@ void CANUpdateTask(void* pvParameters) {
   }
 }
 
+void receiveTask(void* pvParameters) {
+  while (true) {
+    processor->receive();  // SET_CMD受信
+
+    // 受信データを取得してLCDに表示
+    float receivedData_p[8];
+    float receivedData_e[8];
+    processor->getReceivedData(receivedData_p, receivedData_e);
+    // displayReceivedData(receivedData_p, 8);
+    if (-1*receivedData_p[0]<=0 && ax4_lim <= -1*receivedData_p[0]) {
+        ax4_target = -receivedData_p[0]; // 目標値は必ずマイナス
+        ax5_target = receivedData_p[0]; // 目標値は必ずマイナス
+    }else {
+        ax4_target = ax4_lim; // 目標値は必ずマイナス
+        ax5_target = -1*ax4_lim; // 目標値は必ずマイナス
+    }
+
+    if (abs(receivedData_e[2]) < current_max) {
+        if(0 < rev2 && rev2 < 0.4){
+            current2 = receivedData_e[2];
+        }else{
+            current2 = 0;
+        }
+    } else {
+        current2 = 0;
+    }
+    
+    if (abs(receivedData_e[3]) < current_max) {
+        if(0 < rev3 && rev3 < 0.4){
+            current3 = receivedData_e[3];
+        }else{
+            current3 = 0;
+        }
+    } else {
+        current3 = 0;
+    }
+
+    
+    if (abs(receivedData_e[4]) < current_max) {
+        if(abs(angle) < M_PI/2){
+            current1 = receivedData_e[4];
+        }else{
+            current1 = 0;
+        }
+    } else {
+        current1 = 0;
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
+void sendTask(void* pvParameters) {
+    static float p_data[8] = {0,0,0,0,0,0,0,0};
+    //static float e_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    while (true) {
+        // rev2, rev3, angleはグローバル変数なので直接参照できる
+        p_data[2] = rev2;
+        p_data[3] = rev3;
+        p_data[4] = angle;
+
+        processor->setStateData(p_data);
+        processor->send();  // STATE送信
+
+        vTaskDelay(pdMS_TO_TICKS(100));  // 100ms周期
+    }
+}
 
 void setup() {
     M5.begin();
@@ -102,6 +183,10 @@ void setup() {
     Serial.begin(115200);
     Wire.begin();  // SDA=21, SCL=22 on M5Stack
     as5600.begin();  // 初期化（I2Cアドレスはデフォルト0x36）
+    processor = new CommandProcessor(Serial);
+    
+    xTaskCreatePinnedToCore(receiveTask, "RX", 4096, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(sendTask, "TX", 4096, NULL, 1, NULL, 0);
     
     pinMode(r_lim, INPUT_PULLUP);     // 内部プルアップ有効
     pinMode(l_lim, INPUT_PULLUP);     // 内部プルアップ有効
@@ -187,14 +272,18 @@ void setup() {
     delay(10);
     odrive.begin(0xAB, 0xA7); // CAN IDを指定して初期化,node ID 5
 
-    odrive.setPosition(0x8C, offset_ax4);  // ノードID 4 を原点に復帰
+
+    odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // ノードID 4 を原点に復帰
     delay(10);
-    odrive.setPosition(0xAC, offset_ax5);  // ノードID 5 を原点に復帰
+    odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // ノードID 5 を原点に復帰
+
+    ax5_target = 1.02f;
+    ax4_target = -1*ax5_target;
 
     delay(3000); // 少し待つ
-    odrive.setPosition(0x8C, offset_ax4 + 1.3);  // ノードID 4 を原点に復帰
+    odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // ノードID 4 を原点に復帰
     delay(10);
-    odrive.setPosition(0xAC, offset_ax5 - 1.3);  // ノードID 5 を原点に復帰
+    odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // ノードID 5 を原点に復帰
     
 
     servoController.setup();
@@ -205,11 +294,11 @@ void setup() {
 void loop() {
     // servoController.setAngleWithSpeed(1, 90.0, 100);
     
-    float angle = getAS5600Angle();
+    angle = getAS5600Angle();
 
     // M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
     M5.Lcd.setCursor(0, 30);
-    M5.Lcd.printf("Angle: %.2f deg", angle);
+    M5.Lcd.printf("Angle: %.2f rad", angle);
 
     // if (abs(angle) > 30.0) {
     //     current1 = 0;
@@ -220,15 +309,15 @@ void loop() {
     // c610.setCurrents(current1, current2, current3, current4);
 
     // rev1 = c610.getAngle(0);   // モータ1の積算角度（±∞）
-    rev2 = c610.getAngle(1) - rev2_offset;
-    rev3 = c610.getAngle(2) - rev3_offset;
+    rev2 = pitch_offset + (c610.getAngle(1) - rev2_offset)/one_rev*M_PI/60; // 何回転したか
+    rev3 = pitch_offset + (c610.getAngle(2) - rev3_offset)/one_rev*M_PI/60;
 
     // M5.Lcd.setCursor(30, 60);
     // M5.Lcd.printf("Rev1: %.2f deg", rev1);
     M5.Lcd.setCursor(30, 90);
-    M5.Lcd.printf("Rev2: %.2f deg", rev2);
+    M5.Lcd.printf("Rev2: %.2f rad", rev2);
     M5.Lcd.setCursor(30, 120);
-    M5.Lcd.printf("Rev3: %.2f deg", rev3);
+    M5.Lcd.printf("Rev3: %.2f rad", rev3);
 
     M5.Lcd.setCursor(0, 150);
     if (!digitalRead(Estop)) {
@@ -242,23 +331,29 @@ void loop() {
         M5.Lcd.printf("No Emergency");
     }
 
-    if (rev2 > -2*M_PI*10) {
+    if (rev2 > 0.35) {
         current2 = -650;
     } else {
         current2 = 0;
     }
-    if (rev3 > -2*M_PI*10) {
+    if (rev3 > 0.35) {
         current3 = -650;
     } else {
         current3 = 0;
     }
     current1 = 0;
-    delay(10);
+    delay(5);
     c610.setCurrents(current1, current2, current3, current4);
     M5.Lcd.setCursor(0, 180);
     M5.Lcd.printf("Cur1: %d mA", current1);
+    M5.Lcd.setCursor(0, 210);
+    M5.Lcd.printf("Cur2: %d mA, Cur3: %d mA", current2, current3);
 
-    delay(10);  // 応答性向上のため少し短く
+    delay(5);  // 応答性向上のため少し短く
+    
+    odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // ノードID 4 を原点に復帰
+    delay(10);
+    odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // ノードID 5 を原点に復帰
     
     // c610.update();
 
