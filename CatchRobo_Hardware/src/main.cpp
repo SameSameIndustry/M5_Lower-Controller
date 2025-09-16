@@ -79,6 +79,8 @@ float servo3_angle = 0.0;
 bool rlim_flg = false;
 bool llim_flg = false;
 
+int C610_wait = 3000; // C610の初期化待ち時間（ミリ秒）
+
 // 🔧 角度取得関数（引数なし、float型の角度を返す）
 float getAS5600Angle() {
   uint16_t raw = as5600.readAngle();  // 0–4095
@@ -351,6 +353,14 @@ void setup() {
     
     servoController.setup();
 
+    if(!digitalRead(Estop)){
+        M5.Lcd.println("EMERGENCY STOPPED!");
+        while(!digitalRead(Estop)){
+            delay(5);
+        }
+        M5.Lcd.fillScreen(BLACK);
+    }
+    delay(C610_wait); // C610の初期化待ち
     initialize();
 
     // c610.setCurrents(current1, current2, current3, current4);
@@ -395,7 +405,7 @@ void loop() {
         ax4_target = ax4_lim;
         ax5_target = -1*ax4_lim;
         processor->resetReceivedData();  // データをリセット
-        delay(2000);
+        delay(C610_wait); // C610の初期化待ち
         initialize();
     } else {
         M5.Lcd.printf("No Emergency");
