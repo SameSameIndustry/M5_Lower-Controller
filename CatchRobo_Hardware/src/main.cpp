@@ -200,7 +200,7 @@ void receiveTask(void* pvParameters) {
         current4 = 0;
     }
 
-    if(receivedData_p[5] >= -1.2 && receivedData_p[5] <= 1.2){
+    if(receivedData_p[5] > -1.54 && receivedData_p[5] < 1.54){
         servo1_angle = receivedData_p[5];
     }else{
         servo1_angle = 0.0;
