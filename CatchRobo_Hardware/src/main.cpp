@@ -197,7 +197,29 @@ void receiveTask(void* pvParameters) {
             }
         }
     } else {
-        current4 = 0;
+        if (angle > 0){
+            if(receivedData_e[4] <=0){
+                if (receivedData_e[4] > -1*current_max && receivedData_e[4] <= 0){
+                    current4 = receivedData_e[4];
+                }else{
+                    current4 = current_max;
+                }
+            }else{
+                current4 = 0;
+            }
+        }else if (angle < 0){
+            if(receivedData_e[4] >=0){
+                if (receivedData_e[4] < current_max && receivedData_e[4] >= 0){
+                    current4 = receivedData_e[4];
+                }else{
+                    current4 = -1*current_max;
+                }
+            }else{
+                current4 = 0;
+            }
+        }else{
+            current4 = 0;
+        }
     }
 
     if(receivedData_p[5] > -1.54 && receivedData_p[5] < 1.54){
