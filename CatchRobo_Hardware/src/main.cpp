@@ -138,16 +138,16 @@ void receiveTask(void* pvParameters) {
         ax5_target = -1*ax4_lim; // 目標値は必ずマイナス
     }
 
-    if(0 < rev2 && rev2 <= 0.41){
+    if(0 < rev2){
         if (abs(receivedData_e[2]) < current_max*0.5) {
             if (receivedData_e[2] > 20){
                 if(rev2 > 0.4){
                     current2 = 0;
                 }else{
-                    current2 = receivedData_e[2] + 300;
+                    current2 = receivedData_e[2];
                 }
             }else if(receivedData_e[2] < -20){
-                current2 = receivedData_e[2] - 300;
+                current2 = receivedData_e[2];
             }else{
                 current2 = 0;
             }
@@ -162,16 +162,16 @@ void receiveTask(void* pvParameters) {
         current2 = 0;
     }
     
-    if(0 < rev3 && rev3 <= 0.41){
+    if(0 < rev3){
         if (abs(receivedData_e[3]) < current_max*0.5) {
             if (receivedData_e[3] > 20){
                 if ( rev3 > 0.4){
                     current3 = 0;
                 }else{
-                    current3 = receivedData_e[3] + 300;
+                    current3 = receivedData_e[3];
                 }
             }else if(receivedData_e[3] < -20){
-                current3 = receivedData_e[3] - 300;
+                current3 = receivedData_e[3];
             }else{
                 current3 = 0;
             }
