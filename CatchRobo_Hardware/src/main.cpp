@@ -205,16 +205,16 @@ void receiveTask(void* pvParameters) {
     }else{
         servo1_angle = 0.0;
     }
-    if(receivedData_p[6] >= -1.58 && receivedData_p[6] <= 1.58){
-        servo3_angle = receivedData_p[6];
-    }else{
-        servo3_angle = 0.0;
-    }
-    if(receivedData_p[7] >= -0.7 && receivedData_p[7] <= 1.58){
-        servo2_angle = receivedData_p[7];
-    }else{
-        servo2_angle = 0.0;
-    }
+    // if(receivedData_p[6] >= -1.58 && receivedData_p[6] <= 1.58){
+    //     servo3_angle = receivedData_p[6];
+    // }else{
+    //     servo3_angle = 0.0;
+    // }
+    // if(receivedData_p[7] >= -0.7 && receivedData_p[7] <= 1.58){
+    //     servo2_angle = receivedData_p[7];
+    // }else{
+    //     servo2_angle = 0.0;
+    // }
 
 
     vTaskDelay(pdMS_TO_TICKS(10)); // 10
@@ -449,6 +449,16 @@ void loop() {
     delay(5);
     servoController.setAngleWithSpeed(1, servo1_angle, 100); // angle is always negative
     delay(2);
+
+    servo2_angle = M_PI/2 - angle;
+    if(servo2_angle < 0 && servo2_angle > 3.14){
+        if(servo2_angle > 0){
+            servo2_angle = 3.14;
+        }else{
+            servo2_angle = 0;
+        }
+    }
+
     servoController.setAngleWithSpeed(2, servo2_angle, 100); // angle is always negative
     delay(2);
     servoController.setAngleWithSpeed(3, servo3_angle, 100); // angle is always negative
