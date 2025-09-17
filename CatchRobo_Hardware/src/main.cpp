@@ -168,10 +168,10 @@ void receiveTask(void* pvParameters) {
                 if ( rev3 > 0.4){
                     current3 = 0;
                 }else{
-                    current3 = receivedData_e[3] + 360;
+                    current3 = receivedData_e[3] + 300;
                 }
             }else if(receivedData_e[3] < -20){
-                current3 = receivedData_e[3] - 360;
+                current3 = receivedData_e[3] - 300;
             }else{
                 current3 = 0;
             }
@@ -188,16 +188,16 @@ void receiveTask(void* pvParameters) {
 
     if(abs(angle) < M_PI/2){
         if (abs(receivedData_e[4]) < current_max) {
-            current1 = receivedData_e[4];
+            current4 = receivedData_e[4];
         }else{
             if(receivedData_e[4] > 0){
-                current1 = current_max;
+                current4 = current_max;
             }else{  
-                current1 = -1*current_max;
+                current4 = -1*current_max;
             }
         }
     } else {
-        current1 = 0;
+        current4 = 0;
     }
 
     if(receivedData_p[5] >= -1.2 && receivedData_p[5] <= 1.2){
@@ -239,26 +239,12 @@ void sendTask(void* pvParameters) {
 }
 
 void initialize(){
-    // ODriveの初期設定
-    odrive.begin(0x8B, 0x87); // CAN IDを指定して初期化,node ID 4
-    delay(5);
-    odrive.begin(0xAB, 0xA7); // CAN IDを指定して初期化,node ID 5
-    delay(5);
-
-
     // odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // ノードID 4 を原点に復帰
     // delay(10);
     // odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // ノードID 5 を原点に復帰
 
     // ax4_target = ax4_lim;
     // ax5_target = -1*ax4_target;
-
-    for (int i = 1; i <= 5; ++i) {
-        odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // ノードID 4 を原点に復帰
-        delay(5);
-        odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // ノードID 5 を原点に復帰
-        delay(5);
-    }
 
     if(digitalRead(r_lim) && digitalRead(l_lim)) {
         current3 = current3_init + 300;
@@ -295,6 +281,7 @@ void initialize(){
     current1 = 0;
     current2 = 0;
     current3 = 0;
+    current4 = 0;
     
     c610.setCurrents(current1, current2, current3, current4);
     // c610.update();
@@ -305,6 +292,23 @@ void initialize(){
     rev3_offset = c610.getAngle(2);
 
     delay(20);
+    
+    for (int i = 0; i < 5; ++i) {  
+        // ODriveの初期設定, C610の初期設定後に行う
+        odrive.begin(0x8B, 0x87); // CAN IDを指定して初期化,node ID 4
+        delay(5);
+        odrive.begin(0xAB, 0xA7); // CAN IDを指定して初期化,node ID 5
+        delay(5);
+    }
+    
+
+    for (int i = 1; i < 3; ++i) {
+        odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // ノードID 4 を原点に復帰
+        delay(5);
+        odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // ノードID 5 を原点に復帰
+        delay(5);
+    }
+
     
     servoController.setAngleWithSpeed(1, 0, 100); // angle is always negative
     servoController.setAngleWithSpeed(2, 0, 100); // angle is always negative
@@ -393,6 +397,7 @@ void loop() {
         current1 = 0;
         current2 = 0;
         current3 = 0;
+        current4 = 0;
         c610.setCurrents(current1, current2, current3, current4);
         // M5.Lcd.fillScreen(BLACK);
         // M5.Lcd.setTextColor(RED);
@@ -430,7 +435,7 @@ void loop() {
     c610.setCurrents(current1, current2, current3, current4);
 
     M5.Lcd.setCursor(0, 120);
-    M5.Lcd.printf("Cur1: %d mA", current1);
+    M5.Lcd.printf("Cur4: %d mA", current4);
     M5.Lcd.setCursor(0, 150);
     M5.Lcd.printf("Cur2: %d mA", current2);
     M5.Lcd.setCursor(0, 180);
