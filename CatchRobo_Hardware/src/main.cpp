@@ -119,6 +119,12 @@ void CANUpdateTask(void* pvParameters) {
   }
 }
 
+void update_C610encoder(){
+    for (int i = 0; i < 2; ++i) {
+        c610.update(ids[i]);  // 各 CAN ID に対してアップデート
+    }
+}
+
 void receiveTask(void* pvParameters) {
   while (true) {
     processor->receive();  // SET_CMD受信
@@ -372,17 +378,17 @@ void setup() {
     can.setMode(MCP_NORMAL);
     M5.Lcd.println("CAN Initialized");
 
-    for (int i = 0; i < 2; ++i) {
-        xTaskCreatePinnedToCore(
-        CANUpdateTask,
-        "CANUpdateTask",
-        4096,
-        &ids[i],
-        1,
-        NULL,
-        1
-        );
-    }
+    // for (int i = 0; i < 2; ++i) {
+    //     xTaskCreatePinnedToCore(
+    //     CANUpdateTask,
+    //     "CANUpdateTask",
+    //     4096,
+    //     &ids[i],
+    //     1,
+    //     NULL,
+    //     1
+    //     );
+    // }
     
     servoController.setup();
 
@@ -461,8 +467,11 @@ void loop() {
     M5.Lcd.setCursor(30, 90);
     M5.Lcd.printf("Rev3: %.4f rad", rev3);
 
-    delay(5);
+    // delay(5);
     c610.setCurrents(current1, current2, current3, current4);
+    delay(1);
+    update_C610encoder();
+    delay(1);
 
     M5.Lcd.setCursor(0, 120);
     M5.Lcd.printf("Cur4: %d mA", current4);
@@ -472,11 +481,17 @@ void loop() {
     M5.Lcd.printf("Cur3: %d mA", current3);
     
     odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // move to target ax4
-    delay(5);
+    delay(1);
+    update_C610encoder();
+    delay(1);
     odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // move to target ax5
-    delay(5);
+    delay(1);
+    update_C610encoder();
+    delay(1);
     servoController.setAngleWithSpeed(1, servo1_angle, 100); // angle is always negative
-    delay(5);
+    delay(1);
+    update_C610encoder();
+    delay(1);
 
     servo2_angle = M_PI/2 - angle;
     if(servo2_angle < 0 && servo2_angle > 3.14){
@@ -488,7 +503,9 @@ void loop() {
     }
 
     servoController.setAngleWithSpeed(2, servo2_angle, 100); // angle is always negative
-    delay(5);
+    delay(1);
+    update_C610encoder();
+    delay(1);
     servoController.setAngleWithSpeed(3, servo3_angle, 100); // angle is always negative
     // delay(2);
     M5.Lcd.setCursor(0, 210);
