@@ -304,7 +304,15 @@ void processReceive() {
                 current2 = 0;
             }
         } else {
-            current2 = (receivedData_e[2] > 0) ? current2_init : -current2_init;
+            if(receivedData_e[2] > 0){
+                if(rev2 > 0.4){
+                    current2 = 0;
+                }else{
+                    current2 = current2_init + 160;
+                }
+            }else{
+                current2 = -500;
+            }
         }
     } else {
         current2 = 0;
@@ -318,26 +326,58 @@ void processReceive() {
                 if(receivedData_e[3] >= -540){
                     current3 = receivedData_e[3];
                 }else{
-                    current3 = -500;
+                    current3 = -540;
                 }
             } else {
                 current3 = 0;
             }
         } else {
-            current3 = (receivedData_e[3] > 0) ? current3_init : -current3_init;
+            if(receivedData_e[3] > 0){
+                if(rev3 > 0.4){
+                    current3 = 0;
+                }else{
+                    current3 = current3_init + 160;
+                }
+            }else{
+                current3 = -540;
+            }
         }
     } else {
         current3 = 0;
     }
 
-    if (abs(angle) < M_PI / 2) {
-        current4 = (abs(receivedData_e[4]) < current_max) ? receivedData_e[4] : (receivedData_e[4] > 0 ? current_max : -current_max);
+    if(abs(angle) < M_PI/2){
+        if (abs(receivedData_e[4]) < current_max) {
+            current4 = receivedData_e[4];
+        }else{
+            if(receivedData_e[4] > 0){
+                current4 = current_max;
+            }else{  
+                current4 = -1*current_max;
+            }
+        }
     } else {
-        if (angle > 0) {
-            current4 = (receivedData_e[4] <= 0 && receivedData_e[4] > -current_max) ? receivedData_e[4] : 0;
-        } else if (angle < 0) {
-            current4 = (receivedData_e[4] >= 0 && receivedData_e[4] < current_max) ? receivedData_e[4] : 0;
-        } else {
+        if (angle > 0){
+            if(receivedData_e[4] <=0){
+                if (receivedData_e[4] > -1*current_max && receivedData_e[4] <= 0){
+                    current4 = receivedData_e[4];
+                }else{
+                    current4 = current_max;
+                }
+            }else{
+                current4 = 0;
+            }
+        }else if (angle < 0){
+            if(receivedData_e[4] >=0){
+                if (receivedData_e[4] < current_max && receivedData_e[4] >= 0){
+                    current4 = receivedData_e[4];
+                }else{
+                    current4 = -1*current_max;
+                }
+            }else{
+                current4 = 0;
+            }
+        }else{
             current4 = 0;
         }
     }
@@ -540,11 +580,14 @@ void loop() {
             delay(5);
         }
         M5.Lcd.fillScreen(BLACK);
+        M5.Lcd.printf("RESTART!");
         ax4_target = ax4_lim;
         ax5_target = -1*ax4_lim;
         processor->resetReceivedData();  // データをリセット
         delay(C610_wait); // C610の初期化待ち
+        M5.Lcd.fillScreen(BLACK);
         initialize();
+        M5.Lcd.fillScreen(BLACK);
     } else {
         // M5.Lcd.printf("No Emergency");
     }
