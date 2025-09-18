@@ -278,6 +278,8 @@ void initialize(){
         current3 = current3_init + 300;
         current2 = 0; // 少し強めに
     }
+    current1 = 0;
+    current4 = 0;
     c610.setCurrents(current1, current2, current3, current4);
     delay(10);
 
@@ -285,16 +287,22 @@ void initialize(){
         if (digitalRead(r_lim) && digitalRead(l_lim)) {
             current3 = current3_init;
             current2 = current2_init;
+            current1 = 0;
+            current4 = 0;
             c610.setCurrents(current1, current2, current3, current4);
             delay(10);
         }else if (!digitalRead(r_lim)) {
             current3 = 0;
             current2 = current2_init;
+            current1 = 0;
+            current4 = 0;
             c610.setCurrents(current1, current2, current3, current4);
             delay(10);
         } else if (!digitalRead(l_lim)) {
             current2 = 0;
             current3 = current3_init;
+            current1 = 0;
+            current4 = 0;
             c610.setCurrents(current1, current2, current3, current4);
             delay(10);
         }
@@ -426,6 +434,7 @@ void loop() {
         // M5.Lcd.setTextSize(3);
         M5.Lcd.printf("EMERGENCY STOP!");
         while(!digitalRead(Estop)){
+            angle = getAS5600Angle();
             delay(5);
         }
         M5.Lcd.fillScreen(BLACK);
