@@ -139,7 +139,7 @@ void receiveTask(void* pvParameters) {
     }
 
     if(0 < rev2){
-        if (abs(receivedData_e[2]) < current_max*0.5) {
+        if (abs(receivedData_e[2]) < current2_init + 100) {
             if (receivedData_e[2] > 20){
                 if(rev2 > 0.4){
                     current2 = 0;
@@ -153,9 +153,9 @@ void receiveTask(void* pvParameters) {
             }
         }else{
             if (receivedData_e[2] > 0){
-                current2 = current_max;
+                current2 = current2_init + 100;
             }else{
-                current2 = -1*current_max;
+                current2 = -1*(current2_init + 100);
             }
         }
     } else {
@@ -163,7 +163,7 @@ void receiveTask(void* pvParameters) {
     }
     
     if(0 < rev3){
-        if (abs(receivedData_e[3]) < current_max*0.5) {
+        if (abs(receivedData_e[3]) < current3_init + 100) {
             if (receivedData_e[3] > 20){
                 if ( rev3 > 0.4){
                     current3 = 0;
@@ -177,9 +177,9 @@ void receiveTask(void* pvParameters) {
             }
         }else{
             if (receivedData_e[3] > 0){
-                current3 = current_max;
+                current3 = current3_init + 100;
             }else{
-                current3 = -1*current_max;
+                current3 = -1*(current3_init + 100);
             }
         }
     } else {
@@ -321,7 +321,7 @@ void initialize(){
     rev2_offset = c610.getAngle(1);
     rev3_offset = c610.getAngle(2);
 
-    delay(20);
+    delay(200);
     
     for (int i = 0; i < 5; ++i) {  
         // ODriveの初期設定, C610の初期設定後に行う
@@ -331,7 +331,6 @@ void initialize(){
         delay(5);
     }
     
-
     for (int i = 1; i < 3; ++i) {
         odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // ノードID 4 を原点に復帰
         delay(5);
@@ -377,7 +376,7 @@ void setup() {
         xTaskCreatePinnedToCore(
         CANUpdateTask,
         "CANUpdateTask",
-        2048,
+        4096,
         &ids[i],
         1,
         NULL,
@@ -472,14 +471,12 @@ void loop() {
     M5.Lcd.setCursor(0, 180);
     M5.Lcd.printf("Cur3: %d mA", current3);
     
-    delay(5);  // wait for responsiveness
-    
     odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // move to target ax4
     delay(5);
     odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // move to target ax5
     delay(5);
     servoController.setAngleWithSpeed(1, servo1_angle, 100); // angle is always negative
-    delay(2);
+    delay(5);
 
     servo2_angle = M_PI/2 - angle;
     if(servo2_angle < 0 && servo2_angle > 3.14){
@@ -491,7 +488,7 @@ void loop() {
     }
 
     servoController.setAngleWithSpeed(2, servo2_angle, 100); // angle is always negative
-    delay(2);
+    delay(5);
     servoController.setAngleWithSpeed(3, servo3_angle, 100); // angle is always negative
     // delay(2);
     M5.Lcd.setCursor(0, 210);
