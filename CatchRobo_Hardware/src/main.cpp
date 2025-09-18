@@ -53,8 +53,8 @@ uint16_t current3 = 0;
 uint16_t current4 = 0;
 
 // initial current setup
-uint16_t current2_init = 600;
-uint16_t current3_init = 600;
+uint16_t current2_init = 560;
+uint16_t current3_init = 560;
 
 uint16_t current_max = 1000; // current limit
 
@@ -291,11 +291,11 @@ void processReceive() {
 
     // Current and servo angle calculations
     if (0 < rev2) {
-        if (abs(receivedData_e[2]) < current2_init) {
+        if (abs(receivedData_e[2]) < current2_init + 160) {
             if (receivedData_e[2] > 20) {
                 current2 = (rev2 > 0.4) ? 0 : receivedData_e[2];
             } else if (receivedData_e[2] < -20) {
-                if(receivedData_e[2] >= -500){
+                if(receivedData_e[2] >= -540){
                     current2 = receivedData_e[2];
                 }else{
                     current2 = -500;
@@ -311,11 +311,11 @@ void processReceive() {
     }
 
     if (0 < rev3) {
-        if (abs(receivedData_e[3]) < current3_init) {
+        if (abs(receivedData_e[3]) < current3_init + 160) {
             if (receivedData_e[3] > 20) {
                 current3 = (rev3 > 0.4) ? 0 : receivedData_e[3];
             } else if (receivedData_e[3] < -20) {
-                if(receivedData_e[3] >= -500){
+                if(receivedData_e[3] >= -540){
                     current3 = receivedData_e[3];
                 }else{
                     current3 = -500;
@@ -447,7 +447,6 @@ void initialize(){
 
     M5.Lcd.printf("Initialization done.\n");
     delay(100);
-    M5.Lcd.fillScreen(BLACK);
 }
 
 void setup() {
@@ -498,6 +497,7 @@ void setup() {
     delay(C610_wait); // C610の初期化待ち
     initialize();
 
+    M5.Lcd.fillScreen(BLACK);
     // c610.setCurrents(current1, current2, current3, current4);
 }
 
@@ -523,8 +523,9 @@ void loop() {
     // rev2_offset = c610.getAngle(1);
     // rev3_offset = c610.getAngle(2);
 
-    M5.Lcd.setCursor(0, 0);
+    
     if (!digitalRead(Estop)) {
+        M5.Lcd.setCursor(0, 0);
         current1 = 0;
         current2 = 0;
         current3 = 0;
@@ -545,7 +546,7 @@ void loop() {
         delay(C610_wait); // C610の初期化待ち
         initialize();
     } else {
-        M5.Lcd.printf("No Emergency");
+        // M5.Lcd.printf("No Emergency");
     }
     
     angle = getAS5600Angle();
