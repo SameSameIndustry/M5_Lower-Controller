@@ -53,12 +53,12 @@ void C610Controller::update(uint16_t CANID) {
       } else if (diff < -4096) {
         diff += 8192;
       }
-      if (pre_diff[index] > 2048 && current_speed_val > 500) { // ノイズ対策
+      if (pre_diff[index] > 2048 && current_speed_val > 200) { // ノイズ対策
         while (diff < 0){
           diff += 8192;
         }
       }
-      else if (pre_diff[index] < -2048 && current_speed_val < -500) { // ノイズ対策
+      else if (pre_diff[index] < -2048 && current_speed_val < -200) { // ノイズ対策
         while (diff > 0) {
           diff -= 8192;
         }

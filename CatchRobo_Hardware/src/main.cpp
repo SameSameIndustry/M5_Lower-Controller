@@ -53,8 +53,8 @@ uint16_t current3 = 0;
 uint16_t current4 = 0;
 
 // initial current setup
-uint16_t current2_init = 650;
-uint16_t current3_init = 650;
+uint16_t current2_init = 600;
+uint16_t current3_init = 600;
 
 uint16_t current_max = 1000; // current limit
 
@@ -80,6 +80,8 @@ bool rlim_flg = false;
 bool llim_flg = false;
 
 int C610_wait = 3000; // C610の初期化待ち時間（ミリ秒）
+
+float now_t = millis();
 
 // 🔧 角度取得関数（引数なし、float型の角度を返す）
 float getAS5600Angle() {
@@ -123,8 +125,10 @@ void update_C610encoder(){
     for (int i = 0; i < 2; ++i) {
         c610.update(ids[i]);  // 各 CAN ID に対してアップデート
     }
+    rev2 = pitch_offset + (c610.getAngle(1) - rev2_offset)/one_rev*M_PI/60; // 何回転したか
+    rev3 = pitch_offset + (c610.getAngle(2) - rev3_offset)/one_rev*M_PI/60;
 }
-
+/*
 void receiveTask(void* pvParameters) {
   while (true) {
     processor->receive();  // SET_CMD受信
@@ -145,7 +149,7 @@ void receiveTask(void* pvParameters) {
     }
 
     if(0 < rev2){
-        if (abs(receivedData_e[2]) < current2_init + 100) {
+        if (abs(receivedData_e[2]) < current2_init) {
             if (receivedData_e[2] > 20){
                 if(rev2 > 0.4){
                     current2 = 0;
@@ -159,9 +163,9 @@ void receiveTask(void* pvParameters) {
             }
         }else{
             if (receivedData_e[2] > 0){
-                current2 = current2_init + 100;
+                current2 = current2_init;
             }else{
-                current2 = -1*(current2_init + 100);
+                current2 = -1*(current2_init);
             }
         }
     } else {
@@ -169,7 +173,7 @@ void receiveTask(void* pvParameters) {
     }
     
     if(0 < rev3){
-        if (abs(receivedData_e[3]) < current3_init + 100) {
+        if (abs(receivedData_e[3]) < current3_init) {
             if (receivedData_e[3] > 20){
                 if ( rev3 > 0.4){
                     current3 = 0;
@@ -183,9 +187,9 @@ void receiveTask(void* pvParameters) {
             }
         }else{
             if (receivedData_e[3] > 0){
-                current3 = current3_init + 100;
+                current3 = current3_init;
             }else{
-                current3 = -1*(current3_init + 100);
+                current3 = -1*(current3_init);
             }
         }
     } else {
@@ -265,6 +269,94 @@ void sendTask(void* pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(10));  // 100ms周期
     }
 }
+*/
+
+// 受信処理を関数化
+void processReceive() {
+    processor->receive();  // SET_CMD受信
+
+    // 受信データを取得
+    float receivedData_p[8];
+    float receivedData_e[8];
+    processor->getReceivedData(receivedData_p, receivedData_e);
+
+    // 目標値の更新
+    if (-1 * receivedData_p[0] <= 0 && ax4_lim <= -1 * receivedData_p[0]) {
+        ax4_target = -1 * receivedData_p[0];
+        ax5_target = receivedData_p[0];
+    } else {
+        ax4_target = ax4_lim;
+        ax5_target = -1 * ax4_lim;
+    }
+
+    // Current and servo angle calculations
+    if (0 < rev2) {
+        if (abs(receivedData_e[2]) < current2_init) {
+            if (receivedData_e[2] > 20) {
+                current2 = (rev2 > 0.4) ? 0 : receivedData_e[2];
+            } else if (receivedData_e[2] < -20) {
+                if(receivedData_e[2] >= -500){
+                    current2 = receivedData_e[2];
+                }else{
+                    current2 = -500;
+                }
+            } else {
+                current2 = 0;
+            }
+        } else {
+            current2 = (receivedData_e[2] > 0) ? current2_init : -current2_init;
+        }
+    } else {
+        current2 = 0;
+    }
+
+    if (0 < rev3) {
+        if (abs(receivedData_e[3]) < current3_init) {
+            if (receivedData_e[3] > 20) {
+                current3 = (rev3 > 0.4) ? 0 : receivedData_e[3];
+            } else if (receivedData_e[3] < -20) {
+                if(receivedData_e[3] >= -500){
+                    current3 = receivedData_e[3];
+                }else{
+                    current3 = -500;
+                }
+            } else {
+                current3 = 0;
+            }
+        } else {
+            current3 = (receivedData_e[3] > 0) ? current3_init : -current3_init;
+        }
+    } else {
+        current3 = 0;
+    }
+
+    if (abs(angle) < M_PI / 2) {
+        current4 = (abs(receivedData_e[4]) < current_max) ? receivedData_e[4] : (receivedData_e[4] > 0 ? current_max : -current_max);
+    } else {
+        if (angle > 0) {
+            current4 = (receivedData_e[4] <= 0 && receivedData_e[4] > -current_max) ? receivedData_e[4] : 0;
+        } else if (angle < 0) {
+            current4 = (receivedData_e[4] >= 0 && receivedData_e[4] < current_max) ? receivedData_e[4] : 0;
+        } else {
+            current4 = 0;
+        }
+    }
+
+    servo1_angle = (receivedData_p[5] > -1.54 && receivedData_p[5] < 1.54) ? receivedData_p[5] : 0.0;
+}
+
+// 送信処理を関数化
+void processSend() {
+    static float p_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    // rev2, rev3, angleはグローバル変数なので直接参照
+    p_data[2] = rev2;
+    p_data[3] = rev3;
+    p_data[4] = angle;
+
+    processor->setStateData(p_data);
+    processor->send();  // STATE送信
+}
 
 void initialize(){
     // odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // ノードID 4 を原点に復帰
@@ -321,8 +413,12 @@ void initialize(){
     
     c610.setCurrents(current1, current2, current3, current4);
     // c610.update();
+    for(int i=0; i<100; i++){
+        update_C610encoder();
+        delay(1);
+    }
     
-    delay(200);
+    delay(100);
     
     rev2_offset = c610.getAngle(1);
     rev3_offset = c610.getAngle(2);
@@ -363,8 +459,8 @@ void setup() {
     as5600.begin();  // 初期化（I2Cアドレスはデフォルト0x36）
     processor = new CommandProcessor(Serial);
     
-    xTaskCreatePinnedToCore(receiveTask, "RX", 4096, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(sendTask, "TX", 4096, NULL, 1, NULL, 0);
+    // xTaskCreatePinnedToCore(receiveTask, "RX", 4096, NULL, 1, NULL, 0);
+    // xTaskCreatePinnedToCore(sendTask, "TX", 4096, NULL, 1, NULL, 0);
     
     pinMode(r_lim, INPUT_PULLUP);     // 内部プルアップ有効
     pinMode(l_lim, INPUT_PULLUP);     // 内部プルアップ有効
@@ -456,42 +552,50 @@ void loop() {
 
     
     // M5.Lcd.fillRect(0, 30, 320, 30, BLACK);
-    M5.Lcd.setCursor(0, 30);
-    M5.Lcd.printf("Angle: %.4f rad", angle);
+    // M5.Lcd.setCursor(0, 30);
+    // M5.Lcd.printf("Agl: %.4f rad, Rev2: %.4f rad, Rev3: %.4f rad", angle, rev2, rev3);
+    // delay(2);
+    // update_C610encoder();
 
-    rev2 = pitch_offset + (c610.getAngle(1) - rev2_offset)/one_rev*M_PI/60; // 何回転したか
-    rev3 = pitch_offset + (c610.getAngle(2) - rev3_offset)/one_rev*M_PI/60;
+    // M5.Lcd.setCursor(30, 60);
+    // M5.Lcd.printf("Rev2: %.4f rad", rev2);
+    // delay(2);
+    // update_C610encoder();
 
-    M5.Lcd.setCursor(30, 60);
-    M5.Lcd.printf("Rev2: %.4f rad", rev2);
-    M5.Lcd.setCursor(30, 90);
-    M5.Lcd.printf("Rev3: %.4f rad", rev3);
+    // M5.Lcd.setCursor(30, 90);
+    // M5.Lcd.printf("Rev3: %.4f rad", rev3);
+    // delay(2);
+    // update_C610encoder();
 
     // delay(5);
     c610.setCurrents(current1, current2, current3, current4);
-    delay(1);
+    delay(2);
     update_C610encoder();
-    delay(1);
+    // delay(1);
 
-    M5.Lcd.setCursor(0, 120);
-    M5.Lcd.printf("Cur4: %d mA", current4);
-    M5.Lcd.setCursor(0, 150);
-    M5.Lcd.printf("Cur2: %d mA", current2);
-    M5.Lcd.setCursor(0, 180);
-    M5.Lcd.printf("Cur3: %d mA", current3);
+    // M5.Lcd.setCursor(0, 120);
+    // M5.Lcd.printf("C4: %d mA, C2: %d mA, C3: %d mA", current4, current2, current3);
+    // delay(2);
+    // update_C610encoder();
+    // M5.Lcd.setCursor(0, 150);
+    // M5.Lcd.printf("Cur2: %d mA", current2);
+    // delay(2);
+    // update_C610encoder();
+    // M5.Lcd.setCursor(0, 180);
+    // M5.Lcd.printf("Cur3: %d mA", current3);
+    // delay(2);
+    // update_C610encoder();
     
     odrive.setPosition(0x8C, ax4_target/M_PI*4 + (offset_ax4+1.3));  // move to target ax4
-    delay(1);
-    update_C610encoder();
-    delay(1);
+    // delay(1);
+    // delay(1);
     odrive.setPosition(0xAC, ax5_target/M_PI*4 + (offset_ax5-1.3));  // move to target ax5
-    delay(1);
+    delay(2);
     update_C610encoder();
-    delay(1);
+    // delay(1);
     servoController.setAngleWithSpeed(1, servo1_angle, 100); // angle is always negative
-    delay(1);
-    update_C610encoder();
-    delay(1);
+    // delay(1);
+    // delay(1);
 
     servo2_angle = M_PI/2 - angle;
     if(servo2_angle < 0 && servo2_angle > 3.14){
@@ -503,11 +607,18 @@ void loop() {
     }
 
     servoController.setAngleWithSpeed(2, servo2_angle, 100); // angle is always negative
-    delay(1);
-    update_C610encoder();
-    delay(1);
+    // delay(1);
+    // delay(1);
     servoController.setAngleWithSpeed(3, servo3_angle, 100); // angle is always negative
     // delay(2);
-    M5.Lcd.setCursor(0, 210);
-    M5.Lcd.printf("S1: %.2f rad, %.2f rad, %.2f rad", servo1_angle, servo2_angle, servo3_angle);
+    // update_C610encoder();
+    // delay(2);
+    // M5.Lcd.setCursor(0, 210);
+    //M5.Lcd.printf("S1: %.2f rad, %.2f rad, %.2f rad", servo1_angle, servo2_angle, servo3_angle);
+    // M5.Lcd.printf("%.4f Hz", 1000/(millis() - now_t));
+    // now_t = millis();
+    processReceive();
+    processSend();
+    delay(2);
+    update_C610encoder();
 }
