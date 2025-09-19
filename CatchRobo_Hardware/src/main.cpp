@@ -292,7 +292,7 @@ void processReceive() {
 
     // Current and servo angle calculations
     if (0 < rev2) {
-        if (abs(receivedData_e[2]) < current2_init + 300) {
+        if (abs(receivedData_e[2]) < current2_init + 400) {
             if (receivedData_e[2] > 20) {
                 current2 = (rev2 > 0.4) ? 0 : receivedData_e[2];
             } else if (receivedData_e[2] < -20) {
@@ -309,7 +309,7 @@ void processReceive() {
                 if(rev2 > 0.4){
                     current2 = 0;
                 }else{
-                    current2 = current2_init + 300;
+                    current2 = current2_init + 400;
                 }
             }else{
                 current2 = -800;
@@ -320,7 +320,7 @@ void processReceive() {
     }
 
     if (0 < rev3) {
-        if (abs(receivedData_e[3]) < current3_init + 300) {
+        if (abs(receivedData_e[3]) < current3_init + 400) {
             if (receivedData_e[3] > 20) {
                 current3 = (rev3 > 0.4) ? 0 : receivedData_e[3];
             } else if (receivedData_e[3] < -20) {
@@ -337,7 +337,7 @@ void processReceive() {
                 if(rev3 > 0.4){
                     current3 = 0;
                 }else{
-                    current3 = current3_init + 300;
+                    current3 = current3_init + 400;
                 }
             }else{
                 current3 = -800;
@@ -347,7 +347,7 @@ void processReceive() {
         current3 = 0;
     }
 
-    if(abs(angle) < M_PI/2){
+    if(abs(angle) < M_PI*2/3){
         if (abs(receivedData_e[4]) < current_max) {
             current4 = receivedData_e[4];
         }else{
