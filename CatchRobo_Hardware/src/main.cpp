@@ -59,8 +59,10 @@ uint16_t current3_init = 600;
 uint16_t current_max = 1000; // current limit
 
 // float rev1 = 0;
-float rev2 = 0; // 目標値は必ずマイナス
-float rev3 = 0; // 目標値は必ずマイナス
+
+const float pitch_offset = 0.4; // ピッチオフセット（必要に応じて調整）
+float rev2 = pitch_offset; // 目標値は必ずマイナス
+float rev3 = pitch_offset; // 目標値は必ずマイナス
 
 float rev2_offset = 0;
 float rev3_offset = 0;
@@ -69,7 +71,6 @@ float angle = 0; // 目標値は必ずマイナス
 static uint16_t ids[] = {0x202, 0x203};
 
 const float one_rev = 36*2*M_PI; // 1回転あたりの角度（36歯ギア×2πラジアン）
-const float pitch_offset = 0.4; // ピッチオフセット（必要に応じて調整）
 
 // servoControllerの目標角度
 float servo1_angle = 0.0;
@@ -291,14 +292,14 @@ void processReceive() {
 
     // Current and servo angle calculations
     if (0 < rev2) {
-        if (abs(receivedData_e[2]) < current2_init + 200) {
+        if (abs(receivedData_e[2]) < current2_init + 300) {
             if (receivedData_e[2] > 20) {
                 current2 = (rev2 > 0.4) ? 0 : receivedData_e[2];
             } else if (receivedData_e[2] < -20) {
-                if(receivedData_e[2] >= -520){
+                if(receivedData_e[2] >= -800){
                     current2 = receivedData_e[2];
                 }else{
-                    current2 = -520;
+                    current2 = -800;
                 }
             } else {
                 current2 = 0;
@@ -308,10 +309,10 @@ void processReceive() {
                 if(rev2 > 0.4){
                     current2 = 0;
                 }else{
-                    current2 = current2_init + 200;
+                    current2 = current2_init + 300;
                 }
             }else{
-                current2 = -520;
+                current2 = -800;
             }
         }
     } else {
@@ -319,14 +320,14 @@ void processReceive() {
     }
 
     if (0 < rev3) {
-        if (abs(receivedData_e[3]) < current3_init + 200) {
+        if (abs(receivedData_e[3]) < current3_init + 300) {
             if (receivedData_e[3] > 20) {
                 current3 = (rev3 > 0.4) ? 0 : receivedData_e[3];
             } else if (receivedData_e[3] < -20) {
-                if(receivedData_e[3] >= -520){
+                if(receivedData_e[3] >= -800){
                     current3 = receivedData_e[3];
                 }else{
-                    current3 = -520;
+                    current3 = -800;
                 }
             } else {
                 current3 = 0;
@@ -336,10 +337,10 @@ void processReceive() {
                 if(rev3 > 0.4){
                     current3 = 0;
                 }else{
-                    current3 = current3_init + 200;
+                    current3 = current3_init + 300;
                 }
             }else{
-                current3 = -520;
+                current3 = -800;
             }
         }
     } else {
@@ -359,10 +360,10 @@ void processReceive() {
     } else {
         if (angle > 0){
             if(receivedData_e[4] <=0){
-                if (receivedData_e[4] > -1*current_max && receivedData_e[4] <= 0){
+                if (receivedData_e[4] > -1*current_max){
                     current4 = receivedData_e[4];
                 }else{
-                    current4 = current_max;
+                    current4 = -1*current_max;
                 }
             }else{
                 current4 = 0;
@@ -372,7 +373,7 @@ void processReceive() {
                 if (receivedData_e[4] < current_max && receivedData_e[4] >= 0){
                     current4 = receivedData_e[4];
                 }else{
-                    current4 = -1*current_max;
+                    current4 = current_max;
                 }
             }else{
                 current4 = 0;
@@ -531,6 +532,7 @@ void setup() {
         M5.Lcd.println("EMERGENCY STOPPED!");
         while(!digitalRead(Estop)){
             delay(5);
+            processSend();
         }
         M5.Lcd.fillScreen(BLACK);
     }
@@ -574,9 +576,13 @@ void loop() {
         // M5.Lcd.fillScreen(BLACK);
         // M5.Lcd.setTextColor(RED);
         // M5.Lcd.setTextSize(3);
+        processor->resetStateData();  // データをリセット
+        rev2 = pitch_offset; // 目標値は必ずマイナス
+        rev3 = pitch_offset; // 目標値は必ずマイナス
         M5.Lcd.printf("EMERGENCY STOP!");
         while(!digitalRead(Estop)){
             angle = getAS5600Angle();
+            processSend();
             delay(5);
         }
         M5.Lcd.fillScreen(BLACK);
@@ -584,6 +590,7 @@ void loop() {
         ax4_target = ax4_lim;
         ax5_target = -1*ax4_lim;
         processor->resetReceivedData();  // データをリセット
+        processor->resetStateData();  // データをリセット
         delay(C610_wait); // C610の初期化待ち
         M5.Lcd.fillScreen(BLACK);
         initialize();

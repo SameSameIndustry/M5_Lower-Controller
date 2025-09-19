@@ -79,3 +79,11 @@ void CommandProcessor::resetReceivedData() {
   // received_e を初期値にリセット
   memset(received_e, 0, sizeof(received_e));
 }
+void CommandProcessor::resetStateData() {
+  // received_p を初期値にリセット
+  float default_p[8] = {0,0,0.4,0.4,0,0,0,0};
+  memcpy(state_p, default_p, sizeof(received_p));
+
+  // received_e を初期値にリセット
+  memset(state_e, 0, sizeof(received_e));
+}
