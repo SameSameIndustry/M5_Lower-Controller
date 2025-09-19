@@ -25,7 +25,7 @@ const float offset_ax5 = -3.42; // for node ID 5
 const float ax4_lim = -1.02; // limitation for ax4 and ax5
 
 float ax4_target = ax4_lim;
-float ax5_target = -1*ax4_lim;
+float ax5_target = -1*ax4_target;
 
 float rev = 1.2; // strictry positive
 
@@ -53,8 +53,8 @@ uint16_t current3 = 0;
 uint16_t current4 = 0;
 
 // initial current setup
-uint16_t current2_init = 560;
-uint16_t current3_init = 560;
+uint16_t current2_init = 600;
+uint16_t current3_init = 600;
 
 uint16_t current_max = 1000; // current limit
 
@@ -291,14 +291,14 @@ void processReceive() {
 
     // Current and servo angle calculations
     if (0 < rev2) {
-        if (abs(receivedData_e[2]) < current2_init + 160) {
+        if (abs(receivedData_e[2]) < current2_init + 200) {
             if (receivedData_e[2] > 20) {
                 current2 = (rev2 > 0.4) ? 0 : receivedData_e[2];
             } else if (receivedData_e[2] < -20) {
-                if(receivedData_e[2] >= -540){
+                if(receivedData_e[2] >= -520){
                     current2 = receivedData_e[2];
                 }else{
-                    current2 = -500;
+                    current2 = -520;
                 }
             } else {
                 current2 = 0;
@@ -308,10 +308,10 @@ void processReceive() {
                 if(rev2 > 0.4){
                     current2 = 0;
                 }else{
-                    current2 = current2_init + 160;
+                    current2 = current2_init + 200;
                 }
             }else{
-                current2 = -500;
+                current2 = -520;
             }
         }
     } else {
@@ -319,14 +319,14 @@ void processReceive() {
     }
 
     if (0 < rev3) {
-        if (abs(receivedData_e[3]) < current3_init + 160) {
+        if (abs(receivedData_e[3]) < current3_init + 200) {
             if (receivedData_e[3] > 20) {
                 current3 = (rev3 > 0.4) ? 0 : receivedData_e[3];
             } else if (receivedData_e[3] < -20) {
-                if(receivedData_e[3] >= -540){
+                if(receivedData_e[3] >= -520){
                     current3 = receivedData_e[3];
                 }else{
-                    current3 = -540;
+                    current3 = -520;
                 }
             } else {
                 current3 = 0;
@@ -336,10 +336,10 @@ void processReceive() {
                 if(rev3 > 0.4){
                     current3 = 0;
                 }else{
-                    current3 = current3_init + 160;
+                    current3 = current3_init + 200;
                 }
             }else{
-                current3 = -540;
+                current3 = -520;
             }
         }
     } else {
