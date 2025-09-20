@@ -66,11 +66,17 @@ void C610Controller::update(uint16_t CANID) {
       total_angle[index] += diff / 8192.0 * 2 * M_PI;
       last_angle[index] = current_angle;
       pre_diff[index] = diff;
+      current_speed[index] = current_speed_val / 60; // rad/s
     // }
   }
 }
 
 float C610Controller::getAngle(uint8_t motor_index) {
   if (motor_index < 4) return total_angle[motor_index];
+  return 0.0;
+}
+
+float C610Controller::getSpeed(uint8_t motor_index) {
+  if (motor_index < 4) return current_speed[motor_index];
   return 0.0;
 }

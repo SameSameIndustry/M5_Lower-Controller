@@ -64,11 +64,15 @@ const float pitch_offset = 0.4; // ピッチオフセット（必要に応じて
 float rev2 = pitch_offset; // 目標値は必ずマイナス
 float rev3 = pitch_offset; // 目標値は必ずマイナス
 
+float v_rev2 = 0;
+float v_rev3 = 0;
+float v_rev1 = 0;
+
 float rev2_offset = 0;
 float rev3_offset = 0;
 float angle = 0; // 目標値は必ずマイナス
 
-static uint16_t ids[] = {0x202, 0x203};
+static uint16_t ids[] = {0x202, 0x203, 0x204}; // CAN IDの配列
 
 const float one_rev = 36*2*M_PI; // 1回転あたりの角度（36歯ギア×2πラジアン）
 
@@ -123,11 +127,15 @@ void CANUpdateTask(void* pvParameters) {
 }
 
 void update_C610encoder(){
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 3; ++i) {
         c610.update(ids[i]);  // 各 CAN ID に対してアップデート
     }
     rev2 = pitch_offset + (c610.getAngle(1) - rev2_offset)/one_rev*M_PI/60; // 何回転したか
     rev3 = pitch_offset + (c610.getAngle(2) - rev3_offset)/one_rev*M_PI/60;
+    
+    v_rev2 = c610.getSpeed(1)/36*M_PI/60; // rad/s
+    v_rev3 = c610.getSpeed(2)/36*M_PI/60; // rad/s
+    v_rev1 = c610.getSpeed(3)/36/7*M_PI*2; // rad/s
 }
 /*
 void receiveTask(void* pvParameters) {
@@ -389,13 +397,18 @@ void processReceive() {
 // 送信処理を関数化
 void processSend() {
     static float p_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    static float e_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     // rev2, rev3, angleはグローバル変数なので直接参照
     p_data[2] = rev2;
     p_data[3] = rev3;
     p_data[4] = angle;
 
-    processor->setStateData(p_data);
+    e_data[2] = v_rev2; // rad/s
+    e_data[3] = v_rev3; // rad/s
+    e_data[4] = v_rev1; // rad/s
+
+    processor->setStateData(p_data, e_data);
     processor->send();  // STATE送信
 }
 
@@ -579,6 +592,9 @@ void loop() {
         processor->resetStateData();  // データをリセット
         rev2 = pitch_offset; // 目標値は必ずマイナス
         rev3 = pitch_offset; // 目標値は必ずマイナス
+        v_rev2 = 0;
+        v_rev3 = 0;
+        v_rev1 = 0;
         M5.Lcd.printf("EMERGENCY STOP!");
         while(!digitalRead(Estop)){
             angle = getAS5600Angle();

@@ -10,7 +10,7 @@ public:
   void update(uint16_t CANID);  // 受信処理（必要なら拡張）
   
   float getAngle(uint8_t motor_index);  // 0〜3
-
+  float getSpeed(uint8_t motor_index);  // 0〜3
 
 private:
   MCP_CAN* can;

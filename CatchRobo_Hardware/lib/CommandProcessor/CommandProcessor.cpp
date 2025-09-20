@@ -39,21 +39,24 @@ bool CommandProcessor::parseCommand(const String& line) {
 }
 
 void CommandProcessor::send() {
-  serial.print("STATE,8");
+  serial.print("STATE2,8");
   for (int i = 0; i < 8; ++i) {
     serial.print(",");
     serial.print(state_p[i], 4);
   }
-  // for (int i = 0; i < 8; ++i) {
-  //   serial.print(",");
-  //   serial.print(state_e[i], 4);
-  // }
+  for (int i = 0; i < 8; ++i) {
+    serial.print(",");
+    serial.print(state_e[i], 4);
+  }
   serial.println();
 }
 
-void CommandProcessor::setStateData(const float* p_vals) {
+void CommandProcessor::setStateData(const float* p_vals, const float* e_vals) {
   for (int i = 0; i < 8; ++i) {
     state_p[i] = p_vals[i];
+  }
+  for (int i = 0; i < 8; ++i) {
+    state_e[i] = e_vals[i];
   }
 }
 

@@ -8,7 +8,7 @@ public:
   void receive();  // SET_CMD受信処理
   void send();     // STATE送信処理
 
-  void setStateData(const float* p_vals);  // 送信データ設定
+  void setStateData(const float* p_vals, const float* e_vals);  // 送信データ設定
   void getStateData(float* p_out, float* e_out);                // 送信データ取得
   void getReceivedData(float* p_out, float* e_out);             // 受信データ取得
   void resetReceivedData();  // received_p と received_e をリセット
