@@ -290,7 +290,7 @@ void processReceive() {
     processor->getReceivedData(receivedData_p, receivedData_e);
 
     // 目標値の更新
-    if (-1 * receivedData_p[0] <= 0 && ax4_lim <= -1 * receivedData_p[0]) {
+    if (-1 * receivedData_p[0] <= -0.05 && ax4_lim <= -1 * receivedData_p[0]) {
         ax4_target = -1 * receivedData_p[0];
         ax5_target = receivedData_p[0];
     } else {
