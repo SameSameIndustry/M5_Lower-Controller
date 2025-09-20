@@ -355,7 +355,7 @@ void processReceive() {
         current3 = 0;
     }
 
-    if(abs(angle) < M_PI*2/3){
+    if(abs(angle) < M_PI*3/4){
         if (abs(receivedData_e[4]) < current_max) {
             current4 = receivedData_e[4];
         }else{
@@ -545,6 +545,7 @@ void setup() {
         M5.Lcd.println("EMERGENCY STOPPED!");
         while(!digitalRead(Estop)){
             delay(5);
+            angle = getAS5600Angle();
             processSend();
         }
         M5.Lcd.fillScreen(BLACK);
