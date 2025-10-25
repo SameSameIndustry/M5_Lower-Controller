@@ -91,9 +91,9 @@ int C610_wait = 3000; // C610の初期化待ち時間（ミリ秒）
 
 float now_t = millis();
 
-void selectMuxChannel(uint8_t mask) {
+void selectMuxChannel(uint8_t i) {
   Wire.beginTransmission(TCA_ADDR);
-  Wire.write(mask);
+  Wire.write(1 << i);
   Wire.endTransmission();
   delay(2); // 安定化
 }
@@ -308,12 +308,27 @@ void initialize(){
     delay(100);
 }
 
+void scanI2CDevices(uint8_t channel) {
+  delay(2); // 安定化
+
+  M5.Lcd.printf("CH%d:\n", channel);
+  for (uint8_t addr = 1; addr < 127; addr++) {
+    Wire.beginTransmission(addr);
+    uint8_t error = Wire.endTransmission();
+    if (error == 0) {
+      M5.Lcd.printf("  0x%02X found\n", addr);
+    }
+  }
+}
+
+
 void setup() {
     M5.begin();
     M5.Lcd.setTextSize(2);
     M5.Lcd.setCursor(10, 10);
     Serial.begin(115200);
     Wire.begin();  // SDA=21, SCL=22 on M5Stack
+    
     // as5600.begin();  // 初期化（I2Cアドレスはデフォルト0x36）
     processor = new CommandProcessor(Serial);
     
@@ -449,10 +464,11 @@ void loop() {
     M5.Lcd.fillScreen(BLACK);
     M5.Lcd.setCursor(0, 0);
 
-    for (uint8_t i = 0; i < 3; i++) {
-        selectMuxChannel(muxChannels[i]);
+    for (uint8_t i = 2; i < 5; i++) {
+        selectMuxChannel(i);
         encoder.begin();
-        int raw = encoder.readAngle();
+        delay(100);
+        uint16_t raw = encoder.readAngle();
         float deg = raw * 360.0 / 4096.0;
 
         M5.Lcd.printf("CH%d: %6.2f deg\n", i, deg);
