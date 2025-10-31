@@ -479,9 +479,9 @@ void loop() {
     }
 
     delay(500);  
-    //vesc.setERPM(10, 1500.0f);   // 1500 ERPM to VESC ID 1
+    vesc.setERPM(10, 1500.0f);   // 1500 ERPM to VESC ID 1
 
-    vesc.setCurrent(10, 1000.0f);      // 電流指令（Amp）
-    delay(1000);
+    // vesc.setCurrent(10, 1000.0f);      // 電流指令（Amp）
+    delay(100);
 
 }
