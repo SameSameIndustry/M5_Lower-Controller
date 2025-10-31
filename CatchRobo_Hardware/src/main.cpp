@@ -59,9 +59,9 @@ uint16_t current_max = 1000; // current limit
 // AS5600 角度
 float rev[] = {0.0, 0.0, 0.0}; // rad
 float v_rev[] = {0.0, 0.0, 0.0}; // rad/s
-const float rev_offset[] = {138, -15.7, -228};
+const float rev_offset[] = {-138, -15.7, -228};
 const float rev_div[] = {180 / M_PI, 10.0 * 180 / M_PI, 10.0 * 180 / M_PI};
-const int rev_inv[] = {1, 1, -1};
+const int rev_inv[] = {-1, 1, -1};
 float pre_time[] = {0.0, 0.0, 0.0};
 float pre_rev[] = {0.0, 0.0, 0.0};
 
@@ -257,10 +257,10 @@ void Update_Encode(){
         float raw = encoder.readAngle();
         float deg = rev_inv[i] * raw * 360.0 / 4096.0 - rev_offset[i];
         deg = deg / rev_div[i];    
-        if(deg > 180.0){
-            rev[i] -= 360.0;
-        }else if(deg < -180.0){
-            rev[i] += 360.0;
+        if(deg > M_PI){
+            rev[i] = deg - 2*M_PI;
+        }else if(deg < -1*M_PI){
+            rev[i] = deg + M_PI;
         } else{
             rev[i] = deg;
         }
