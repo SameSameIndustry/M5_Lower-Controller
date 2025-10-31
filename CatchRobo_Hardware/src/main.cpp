@@ -50,8 +50,8 @@ ServoController servoController(SerialSTS, servoIDs, centerPosition, maxAmplitud
 
 // C610 電流
 uint16_t current1 = 0;
-uint16_t current2 = 0;
-uint16_t current3 = 0;
+float current2 = 0;
+float current3 = 0;
 uint16_t current4 = 0;
 
 uint16_t current_max = 1000; // current limit
@@ -59,9 +59,11 @@ uint16_t current_max = 1000; // current limit
 // AS5600 角度
 float rev[] = {0.0, 0.0, 0.0}; // rad
 float v_rev[] = {0.0, 0.0, 0.0}; // rad/s
-const float rev_offset[] = {138, -15.7, 130};
+const float rev_offset[] = {138, -15.7, -228};
 const float rev_div[] = {180 / M_PI, 10.0 * 180 / M_PI, 10.0 * 180 / M_PI};
 const int rev_inv[] = {1, 1, -1};
+float pre_time[] = {0.0, 0.0, 0.0};
+float pre_rev[] = {0.0, 0.0, 0.0};
 
 static uint16_t ids[] = {0x202, 0x203, 0x204}; // CAN IDの配列
 
@@ -80,7 +82,7 @@ void selectMuxChannel(uint8_t i) {
   Wire.beginTransmission(TCA_ADDR);
   Wire.write(1 << i);
   Wire.endTransmission();
-  delay(2); // 安定化
+  delay(1); // 安定化
 }
 
 // 受信処理を関数化
@@ -158,7 +160,7 @@ void processReceive() {
         current3 = 0;
     }
 
-    if(abs(rev[0]) < M_PI*3/4){
+    if(abs(rev[0]) < M_PI/2){
         if (abs(receivedData_e[4]) < current_max) {
             current4 = receivedData_e[4];
         }else{
@@ -252,14 +254,19 @@ void Update_Encode(){
         selectMuxChannel(i + 2); // CH2, CH3, CH4を選択
         encoder.begin();
         delay(1); // 安定化待ち
-        uint16_t raw = encoder.readAngle();
+        float raw = encoder.readAngle();
         float deg = rev_inv[i] * raw * 360.0 / 4096.0 - rev_offset[i];
+        deg = deg / rev_div[i];    
         if(deg > 180.0){
-            deg -= 360.0;
+            rev[i] -= 360.0;
         }else if(deg < -180.0){
-            deg += 360.0;
+            rev[i] += 360.0;
+        } else{
+            rev[i] = deg;
         }
-        rev[i] = deg / rev_div[i];
+        v_rev[i] = (rev[i] - pre_rev[i]) / ((millis() - pre_time[i]) / 1000.0);
+        pre_rev[i] = rev[i];
+        pre_time[i] = millis();
     }
 }
 
@@ -352,8 +359,8 @@ void loop() {
         }
     }
 
-    vesc.setCurrent(10, current2);      // 電流指令（Amp）
-    vesc.setCurrent(20, current3);      // 電流指令（Amp）
+    vesc.setCurrent(10, -1 * current2);      // 電流指令（Amp）
+    vesc.setCurrent(20, -1 * current3);      // 電流指令（Amp）
 
     servoController.setAngleWithSpeed(2, servo2_angle, 100); // angle is always negative
     servoController.setAngleWithSpeed(3, servo3_angle, 100); // angle is always negative
