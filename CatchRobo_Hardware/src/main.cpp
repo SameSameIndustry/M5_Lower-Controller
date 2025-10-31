@@ -7,6 +7,7 @@
 #include <AS5600.h>
 #include <Wire.h>
 #include "CommandProcessor.h"
+#include "VescCAN.h"
 
 AS5600 encoder;
 const uint8_t TCA_ADDR = 0x70;
@@ -38,6 +39,7 @@ MCP_CAN can(csPin); // Set CS to pin 12
 
 ODriveCAN odrive(&can);
 C610Controller c610(&can);
+VescCAN vesc(&can);
 
 // サーボ設定
 const std::vector<byte> servoIDs = {1, 2, 3}; // 複数のサーボID
@@ -357,6 +359,8 @@ void setup() {
     }
     delay(C610_wait); // C610の初期化待ち
     initialize();
+    vesc.begin();
+
 
     M5.Lcd.fillScreen(BLACK);
     // c610.setCurrents(current1, current2, current3, current4);
@@ -474,6 +478,10 @@ void loop() {
         M5.Lcd.printf("CH%d: %6.2f deg\n", i, deg);
     }
 
-    delay(500);
+    delay(500);  
+    //vesc.setERPM(10, 1500.0f);   // 1500 ERPM to VESC ID 1
+
+    vesc.setCurrent(10, 1000.0f);      // 電流指令（Amp）
+    delay(1000);
 
 }
