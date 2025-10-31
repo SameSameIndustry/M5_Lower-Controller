@@ -13,7 +13,7 @@ void CommandProcessor::receive() {
 }
 
 bool CommandProcessor::parseCommand(const String& line) {
-  float values[16];
+  float values[24];
   int index = 0;
   int last = 0;
 
@@ -21,7 +21,7 @@ bool CommandProcessor::parseCommand(const String& line) {
     if (line[i] == ',' || i == line.length() - 1) {
       String token = line.substring(last, (i == line.length() - 1) ? i + 1 : i);
       token.trim();
-      if (index >= 1 && index <= 16) {
+      if (index >= 1 && index <= 24) {
         values[index - 1] = token.toFloat();
       }
       index++;
@@ -29,17 +29,18 @@ bool CommandProcessor::parseCommand(const String& line) {
     }
   }
 
-  if (index != 17) return false;
+  if (index != 25) return false;
 
   for (int i = 0; i < 8; ++i) {
     received_p[i] = values[i];
     received_e[i] = values[i + 8];
+    received_v[i] = values[i + 16];  // v_vals are not provided in SET_CMD
   }
   return true;
 }
 
 void CommandProcessor::send() {
-  serial.print("STATE2,8");
+  serial.print("STATE_FULL,8");
   for (int i = 0; i < 8; ++i) {
     serial.print(",");
     serial.print(state_p[i], 4);
@@ -48,29 +49,38 @@ void CommandProcessor::send() {
     serial.print(",");
     serial.print(state_e[i], 4);
   }
+  for (int i = 0; i < 8; ++i) {
+    serial.print(",");
+    serial.print(state_v[i], 4);
+  }
   serial.println();
 }
 
-void CommandProcessor::setStateData(const float* p_vals, const float* e_vals) {
+void CommandProcessor::setStateData(const float* p_vals, const float* e_vals, const float* v_vals) {
   for (int i = 0; i < 8; ++i) {
     state_p[i] = p_vals[i];
   }
   for (int i = 0; i < 8; ++i) {
     state_e[i] = e_vals[i];
   }
-}
-
-void CommandProcessor::getStateData(float* p_out, float* e_out) {
   for (int i = 0; i < 8; ++i) {
-    p_out[i] = state_p[i];
-    e_out[i] = state_e[i];
+    state_v[i] = v_vals[i];
   }
 }
 
-void CommandProcessor::getReceivedData(float* p_out, float* e_out) {
+void CommandProcessor::getStateData(float* p_out, float* e_out, float* v_out) {
+  for (int i = 0; i < 8; ++i) {
+    p_out[i] = state_p[i];
+    e_out[i] = state_e[i];
+    v_out[i] = state_v[i];
+  }
+}
+
+void CommandProcessor::getReceivedData(float* p_out, float* e_out, float* v_out) {
   for (int i = 0; i < 8; ++i) {
     p_out[i] = received_p[i];
     e_out[i] = received_e[i];
+    v_out[i] = received_v[i];
   }
 }
 
@@ -81,6 +91,8 @@ void CommandProcessor::resetReceivedData() {
 
   // received_e を初期値にリセット
   memset(received_e, 0, sizeof(received_e));
+  // received_v を初期値にリセット
+  memset(received_v, 0, sizeof(received_v));
 }
 void CommandProcessor::resetStateData() {
   // received_p を初期値にリセット
@@ -89,4 +101,6 @@ void CommandProcessor::resetStateData() {
 
   // received_e を初期値にリセット
   memset(state_e, 0, sizeof(received_e));
+  // received_v を初期値にリセット
+  memset(state_v, 0, sizeof(received_v));
 }

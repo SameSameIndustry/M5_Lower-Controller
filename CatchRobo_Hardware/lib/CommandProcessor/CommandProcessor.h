@@ -8,9 +8,9 @@ public:
   void receive();  // SET_CMD受信処理
   void send();     // STATE送信処理
 
-  void setStateData(const float* p_vals, const float* e_vals);  // 送信データ設定
-  void getStateData(float* p_out, float* e_out);                // 送信データ取得
-  void getReceivedData(float* p_out, float* e_out);             // 受信データ取得
+  void setStateData(const float* p_vals, const float* e_vals, const float* v_vals);  // 送信データ設定
+  void getStateData(float* p_out, float* e_out, float* v_out);                // 送信データ取得
+  void getReceivedData(float* p_out, float* e_out, float* v_out);             // 受信データ取得
   void resetReceivedData();  // received_p と received_e をリセット
   void resetStateData();    // state_p と state_e をリセット
 
@@ -19,9 +19,11 @@ private:
 
   float received_p[8] = {1.02,-1.02,0,0,0,0,0,0};  // SET_CMDで受信したデータ
   float received_e[8] = {0.0f};
+  float received_v[8] = {0.0f};
 
   float state_p[8] = {0,0,0.4,0.4,0,0,0,0};     // STATEで送信するデータ
   float state_e[8] = {0.0f};
+  float state_v[8] = {0.0f};
 
   bool parseCommand(const String& line);
 };
