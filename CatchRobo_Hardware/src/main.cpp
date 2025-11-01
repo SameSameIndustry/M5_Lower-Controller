@@ -55,6 +55,7 @@ float current3 = 0;
 uint16_t current4 = 0;
 
 uint16_t current_max = 1000; // current limit
+uint16_t vel_max = 2000; // velocity limit
 
 // AS5600 角度
 float rev[] = {0.0, 0.0, 0.0}; // rad
@@ -105,14 +106,14 @@ void processReceive() {
 
     // Current and servo angle calculations
     if (0 < rev[1]) {
-        if (abs(receivedData_e[2]) < current_max) {
+        if (abs(receivedData_e[2]) < vel_max) {
             if (receivedData_e[2] > 20) {
                 current2 = (rev[1] > 0.4) ? 0 : receivedData_e[2];
             } else if (receivedData_e[2] < -20) {
-                if(receivedData_e[2] >= -800){
+                if(receivedData_e[2] >= -1*vel_max){
                     current2 = receivedData_e[2];
                 }else{
-                    current2 = -800;
+                    current2 = -1*vel_max;
                 }
             } else {
                 current2 = 0;
@@ -122,10 +123,10 @@ void processReceive() {
                 if(rev[1] > 0.4){
                     current2 = 0;
                 }else{
-                    current2 = current_max;
+                    current2 = vel_max;
                 }
             }else{
-                current2 = -800;
+                current2 = -1*vel_max;
             }
         }
     } else {
@@ -133,14 +134,14 @@ void processReceive() {
     }
 
     if (0 < rev[2]) {
-        if (abs(receivedData_e[3]) < current_max) {
+        if (abs(receivedData_e[3]) < vel_max) {
             if (receivedData_e[3] > 20) {
                 current3 = (rev[2] > 0.4) ? 0 : receivedData_e[3];
             } else if (receivedData_e[3] < -20) {
-                if(receivedData_e[3] >= -800){
+                if(receivedData_e[3] >= -1*vel_max){
                     current3 = receivedData_e[3];
                 }else{
-                    current3 = -800;
+                    current3 = -1*vel_max;
                 }
             } else {
                 current3 = 0;
@@ -150,7 +151,7 @@ void processReceive() {
                 if(rev[2] > 0.4){
                     current3 = 0;
                 }else{
-                    current3 = current_max;
+                    current3 = vel_max;
                 }
             }else{
                 current3 = -800;
@@ -359,8 +360,10 @@ void loop() {
         }
     }
 
-    vesc.setCurrent(10, -1 * current2);      // 電流指令（Amp）
-    vesc.setCurrent(20, -1 * current3);      // 電流指令（Amp）
+    vesc.setERPM(10, -1 * current2);      // 電流指令（Amp）
+    vesc.setERPM(20, -1 * current3);      // 電流指令（Amp）
+
+    delay(2);
 
     servoController.setAngleWithSpeed(2, servo2_angle, 100); // angle is always negative
     servoController.setAngleWithSpeed(3, servo3_angle, 100); // angle is always negative
